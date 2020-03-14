@@ -12,7 +12,7 @@ This library is accompanied by clients and libraries for different operating sys
 and programming languages.
 
 For more information about AES Crypt and AES Crypt compatible 
-applications for other platforms, please visit [AESCrypt's official website](https://www.aescrypt.com). 
+applications for other platforms, please visit [AESCrypt's official website](https://www.aescrypt.com).  
  
 ## Features
 
@@ -26,23 +26,11 @@ applications for other platforms, please visit [AESCrypt's official website](htt
 
 ## Usage
 
-Here is an example showing encryption and decryption of a file:
-
-```dart
-import 'package:aes_crypt/aes_crypt.dart';
-
-main() {
-}
-```
-
-you can also perform in-memory encryption/decryption:
-
 
 ## Future plans
 
 - support key files
-- support asynchronous operations
-- support streams
+- support streams and asynchronous operations
 - decrease memory consumption
 
 ## Bugs
