@@ -44,4 +44,4 @@ Please file feature requests and bugs at the [issue tracker][tracker].
 - to Phil Nicholls for [PHP-AES-File-Encryption library](https://github.com/philios33/PHP-AES-File-Encryption) 
 - to IgoAtM for [PHP aesCrypt complient class](https://forums.packetizer.com/viewtopic.php?f=72&t=403)
 
-I've used some ideas from those libraries for my implementation.
+I've used some ideas from these libraries for my implementation.
