@@ -29,8 +29,9 @@ applications for other platforms, please visit [AESCrypt's official website](htt
 
 ## Future plans
 
+- support asynchronous operations
+- support streams
 - support key files
-- support streams and asynchronous operations
 - decrease memory consumption
 
 ## Bugs
