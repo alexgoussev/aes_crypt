@@ -5,7 +5,6 @@ that uses 256-bit AES algorithm to encrypt/decrypt files and binary data.
 It is fully compatible with the 
 [AES Crypt file format](https://www.aescrypt.com/aes_file_format.html).
 
-
 This library writes version 2 of the AES Crypt file specification. Backwards compatibility 
 with the older two versions (reading old .aes files) is implemented but untested. 
 Output .aes files are fully compatible with any software using the AES Crypt standard file format.
@@ -13,10 +12,7 @@ This library is accompanied by clients and libraries for different operating sys
 and programming languages.
 
 For more information about AES Crypt and AES Crypt compatible 
-applications for other platforms, visit [AESCrypt's official website](https://www.aescrypt.com).  
-
-
-It is free software, released under the MIT License.
+applications for other platforms, please visit [AESCrypt's official website](https://www.aescrypt.com).  
  
 ## Features
 
