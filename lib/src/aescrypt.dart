@@ -197,133 +197,54 @@ class AESCrypt {
 
 
   Uint8List decryptDataFromFileSync(String source_file) {
-    Uint8List decrypted_data_full;
-    RandomAccessFile f;
-    int file_size_modulo;
-
     source_file = source_file.trim();
 
     AESCryptArgumentError.checkNotNullOrEmpty(_password, 'Empty password.');
     AESCryptArgumentError.checkNotNullOrEmpty(source_file, 'Empty source file path.');
+
+    _log('DECRYPTION', 'Started');
+    _log('PASSWORD', _passBytes);
 
     File inFile = File(source_file);
     if (!inFile.existsSync()) {
       throw AESCryptIOException('Source file $source_file does not exist.');
     }
 
+    RandomAccessFile f;
     try {
       f = inFile.openSync(mode: FileMode.read);
     } on FileSystemException catch(e) {
       throw AESCryptIOException('Failed to open file $source_file for reading.', e.path, e.osError);
     }
 
-    _log('DECRYPTION', 'Started');
+    Map<_Data,Uint8List> keys = _readKeys(f);
 
-    _log('PASSWORD', _passBytes);
+    final Uint8List encrypted_data = _readChunkBytesSync(f, f.lengthSync() - f.positionSync() - 33, 'encrypted data');
+    _log('ENCRYPTED DATA', encrypted_data);
 
-    final Uint8List head = _readChunkBytesSync(f, 3, 'file header');
-    final Uint8List expected_head = Uint8List.fromList([65, 69, 83]);
-    if (head.isNotEqual(expected_head)) {
-      throw AESCryptDataException('The chunk `file header` was expected to be ${expected_head.toHexString()} but found ${head.toHexString()}');
+    final int file_size_modulo = _readChunkIntSync(f, 1, 'file size modulo');
+    _log('FILE SIZE MODULO', file_size_modulo);
+    if (file_size_modulo < 0 || file_size_modulo >= 16) {
+      throw AESCryptDataException('Invalid file size modulos: $file_size_modulo');
     }
 
-    final int version_chunk = _readChunkIntSync(f, 1, 'version byte');
-    switch(version_chunk) {
-      case 0: // file version 0
-        file_size_modulo = _readChunkIntSync(f, 1, 'file size modulo');
-        if (file_size_modulo < 0 || file_size_modulo >= 16) {
-          throw AESCryptDataException('Invalid file size modulo: $file_size_modulo');
-        }
-
-        final Uint8List iv = _readChunkBytesSync(f, 16, 'IV');
-        _log('IV', iv);
-        final Uint8List encrypted_data = _readChunkBytesSync(f, f.lengthSync() - (5+16) - 32, 'encrypted data');
-        final Uint8List hmac = _readChunkBytesSync(f, 32, 'HMAC');
-        _log('HMAC', hmac);
-
-        final Uint8List enc_keys = _createKey(iv, _passBytes);
-        _log('ENCRYPTED KEYS', enc_keys);
-
-        decrypted_data_full = decryptData(encrypted_data, iv, enc_keys);
-
-        // Here the HMAC is (probably) used to verify the decrypted data
-        // Test this using known encrypted files using version 0
-        _validateHMAC(enc_keys, decrypted_data_full, hmac, _HmacType.HMAC);
-        break;
-      case 1: // file version 1
-      case 2: // file version 2
-        _readChunkIntSync(f, 1, 'reserved byte', 0);
-
-        // User data
-        if (version_chunk == 2) {
-          int ext_length = _readChunkIntSync(f, 2, 'extension length');
-          while (ext_length != 0) {
-            _readChunkBytesSync(f, ext_length, 'extension content');
-            ext_length = _readChunkIntSync(f, 2, 'extension length');
-          }
-        }
-
-        // Initialization Vector (IV) used for encrypting the IV and symmetric key
-        // that is actually used to encrypt the bulk of the plaintext file.
-        final Uint8List iv_1 = _readChunkBytesSync(f, 16, 'IV 1');
-        _log('IV_1', iv_1);
-
-        // Encrypted IV and 256-bit AES key used to encrypt the bulk of the file
-        // 16 octets - initialization vector
-        // 32 octets - encryption key
-        final Uint8List enc_keys = _readChunkBytesSync(f, 48, 'Encrypted Keys');
-        _log('ENCRYPTED KEYS', enc_keys);
-
-        // HMAC
-        final Uint8List hmac_1 = _readChunkBytesSync(f, 32, 'HMAC 1');
-        _log('HMAC_1', hmac_1);
-
-        final Uint8List enc_key_1 = _createKey(iv_1, _passBytes);
-        _log('KEY DERIVED FROM IV_1 & PASSWORD', enc_key_1);
-
-        _validateHMAC(enc_key_1, enc_keys, hmac_1, _HmacType.HMAC1);
-
-        final Uint8List encrypted_data = _readChunkBytesSync(f, f.lengthSync() - f.positionSync() - 33, 'encrypted data');
-        _log('ENCRYPTED DATA', encrypted_data);
-
-        file_size_modulo = _readChunkIntSync(f, 1, 'file size modulo');
-        _log('FILE SIZE MODULO', file_size_modulo);
-        if (file_size_modulo < 0 || file_size_modulo >= 16) {
-          throw AESCryptDataException('Invalid file size modulos: $file_size_modulo');
-        }
-
-        final Uint8List hmac_2 = _readChunkBytesSync(f, 32, 'HMAC 2');
-        _log('HMAC_2', hmac_2);
-
-        final Uint8List decrypted_keys = decryptData(enc_keys, iv_1, enc_key_1);
-        _log('DECRYPTED_KEYS', decrypted_keys);
-        final Uint8List iv_2 = decrypted_keys.sublist(0, 16);
-        _log('IV_2', iv_2);
-        final Uint8List enc_key_2 = decrypted_keys.sublist(16);
-        _log('ENCRYPTION KEY 2', enc_key_2);
-
-        _validateHMAC(enc_key_2, encrypted_data, hmac_2, _HmacType.HMAC2);
-
-        decrypted_data_full = decryptData(encrypted_data, iv_2, enc_key_2);
-        break;
-      default:
-        f.closeSync();
-        throw AESCryptDataException('Invalid version chunk: $version_chunk');
-    }
-
+    final Uint8List hmac_2 = _readChunkBytesSync(f, 32, 'HMAC 2');
+    _log('HMAC_2', hmac_2);
     f.closeSync();
 
-    Uint8List decrypted_data = Uint8List.fromList(decrypted_data_full.sublist(0, decrypted_data_full.length - (16 - file_size_modulo)));
+    _validateHMAC(keys[_Data.key2], encrypted_data, hmac_2, _HmacType.HMAC2);
+
+    final Uint8List decrypted_data_full = decryptData(encrypted_data, keys[_Data.iv2], keys[_Data.key2]);
+
+    final Uint8List decrypted_data = Uint8List.fromList(decrypted_data_full.sublist(0, decrypted_data_full.length - (16 - file_size_modulo)));
+
     decrypted_data_full.fillByZero();
+    _log('DECRYPTION', 'Completed');
     return decrypted_data;
   }
 
 
   String decryptFileSync(String source_file, [String dest_file = '']) {
-    Uint8List decrypted_data_full;
-    RandomAccessFile f;
-    int file_size_modulo;
-
     source_file = source_file.trim();
     dest_file = dest_file.trim();
 
@@ -331,112 +252,39 @@ class AESCrypt {
     AESCryptArgumentError.checkNotNullOrEmpty(source_file, 'Empty source file path.');
     if (source_file == dest_file) throw AESCryptArgumentError('Source file path and decrypted file path are the same.');
 
+    _log('DECRYPTION', 'Started');
+    _log('PASSWORD', _passBytes);
+
     File inFile = File(source_file);
     if (!inFile.existsSync()) {
       throw FileSystemException('Source file $source_file does not exist.');
     }
 
-    _log('DECRYPTION', 'Started');
-
-    _log('PASSWORD', _passBytes);
-
+    RandomAccessFile f;
     try {
       f = inFile.openSync(mode: FileMode.read);
     } on FileSystemException catch(e) {
       throw FileSystemException('Failed to open file $source_file for reading.', e.path, e.osError);
     }
 
-    final Uint8List head = _readChunkBytesSync(f, 3, 'file header');
-    final Uint8List expected_head = Uint8List.fromList([65, 69, 83]);
-    if (head.isNotEqual(expected_head)) {
-      throw AESCryptDataException('The chunk `file header` was expected to be ${expected_head.toHexString()} but found ${head.toHexString()}');
+    Map<_Data,Uint8List> keys = _readKeys(f);
+
+    final Uint8List encrypted_data = _readChunkBytesSync(f, f.lengthSync() - f.positionSync() - 33, 'encrypted data');
+    _log('ENCRYPTED DATA', encrypted_data);
+
+    final int file_size_modulo = _readChunkIntSync(f, 1, 'file size modulo');
+    _log('FILE SIZE MODULO', file_size_modulo);
+    if (file_size_modulo < 0 || file_size_modulo >= 16) {
+      throw AESCryptDataException('Invalid file size modulos: $file_size_modulo');
     }
 
-    final int version_chunk = _readChunkIntSync(f, 1, 'version byte');
-    switch(version_chunk) {
-      case 0: // file version 0
-        file_size_modulo = _readChunkIntSync(f, 1, 'file size modulo');
-        if (file_size_modulo < 0 || file_size_modulo >= 16) {
-          throw AESCryptDataException('Invalid file size modulo: $file_size_modulo');
-        }
-
-        final Uint8List iv = _readChunkBytesSync(f, 16, 'IV');
-        _log('IV', iv);
-        final Uint8List encrypted_data = _readChunkBytesSync(f, f.lengthSync() - (5+16) - 32, 'encrypted data');
-        final Uint8List hmac = _readChunkBytesSync(f, 32, 'HMAC');
-        _log('HMAC', hmac);
-
-        final Uint8List enc_keys = _createKey(iv, _passBytes);
-        _log('ENCRYPTED KEYS', enc_keys);
-
-        decrypted_data_full = decryptData(encrypted_data, iv, enc_keys);
-
-        // Here the HMAC is (probably) used to verify the decrypted data
-        // Test this using known encrypted files using version 0
-        _validateHMAC(enc_keys, decrypted_data_full, hmac, _HmacType.HMAC);
-        break;
-      case 1: // file version 1
-      case 2: // file version 2
-        _readChunkIntSync(f, 1, 'reserved byte', 0);
-
-        // User data
-        if (version_chunk == 2) {
-          int ext_length = _readChunkIntSync(f, 2, 'extension length');
-          while (ext_length != 0) {
-            _readChunkBytesSync(f, ext_length, 'extension content');
-            ext_length = _readChunkIntSync(f, 2, 'extension length');
-          }
-        }
-
-        // Initialization Vector (IV) used for encrypting the IV and symmetric key
-        // that is actually used to encrypt the bulk of the plaintext file.
-        final Uint8List iv_1 = _readChunkBytesSync(f, 16, 'IV 1');
-        _log('IV_1', iv_1);
-
-        // Encrypted IV and 256-bit AES key used to encrypt the bulk of the file
-        // 16 octets - initialization vector
-        // 32 octets - encryption key
-        final Uint8List enc_keys = _readChunkBytesSync(f, 48, 'Encrypted Keys');
-        _log('ENCRYPTED KEYS', enc_keys);
-
-        // HMAC
-        final Uint8List hmac_1 = _readChunkBytesSync(f, 32, 'HMAC 1');
-        _log('HMAC_1', hmac_1);
-
-        final Uint8List enc_key_1 = _createKey(iv_1, _passBytes);
-        _log('KEY DERIVED FROM IV_1 & PASSWORD', enc_key_1);
-
-        _validateHMAC(enc_key_1, enc_keys, hmac_1, _HmacType.HMAC1);
-
-        final Uint8List encrypted_data = _readChunkBytesSync(f, f.lengthSync() - f.positionSync() - 33, 'encrypted data');
-        _log('ENCRYPTED DATA', encrypted_data);
-
-        file_size_modulo = _readChunkIntSync(f, 1, 'file size modulo');
-        _log('FILE SIZE MODULO', file_size_modulo);
-        if (file_size_modulo < 0 || file_size_modulo >= 16) {
-          throw AESCryptDataException('Invalid file size modulos: $file_size_modulo');
-        }
-
-        final Uint8List hmac_2 = _readChunkBytesSync(f, 32, 'HMAC 2');
-        _log('HMAC_2', hmac_2);
-
-        final Uint8List decrypted_keys = decryptData(enc_keys, iv_1, enc_key_1);
-        _log('DECRYPTED_KEYS', decrypted_keys);
-        final Uint8List iv_2 = decrypted_keys.sublist(0, 16);
-        _log('IV_2', iv_2);
-        final Uint8List enc_key_2 = decrypted_keys.sublist(16);
-        _log('ENCRYPTION KEY 2', enc_key_2);
-
-        _validateHMAC(enc_key_2, encrypted_data, hmac_2, _HmacType.HMAC2);
-
-        decrypted_data_full = decryptData(encrypted_data, iv_2, enc_key_2);
-        break;
-      default:
-        f.closeSync();
-        throw AESCryptDataException('Invalid version chunk: $version_chunk');
-    }
-
+    final Uint8List hmac_2 = _readChunkBytesSync(f, 32, 'HMAC 2');
+    _log('HMAC_2', hmac_2);
     f.closeSync();
+
+    _validateHMAC(keys[_Data.key2], encrypted_data, hmac_2, _HmacType.HMAC2);
+
+    final Uint8List decrypted_data_full = decryptData(encrypted_data, keys[_Data.iv2], keys[_Data.key2]);
 
     _log('WRITE', 'Started');
     dest_file = _makeDestFilenameFromSource(source_file, dest_file, _Action.decripting);
@@ -454,8 +302,8 @@ class AESCrypt {
     }
     raf.closeSync();
 
-    _log('DECRYPTION', 'Completed');
     decrypted_data_full.fillByZero();
+    _log('DECRYPTION', 'Completed');
     return dest_file;
   }
 
@@ -538,7 +386,7 @@ class AESCrypt {
 //************************** PRIVATE MEMBERS **************************
 
   Map<_Data, Uint8List> _createDataParts() {
-    Map<_Data, Uint8List> dp = {};
+    Map<_Data,Uint8List> dp = {};
 
     _log('PASSWORD', _passBytes);
 
@@ -571,6 +419,63 @@ class AESCrypt {
     _log('HMAC_1', dp[_Data.hmac1]);
 
     return dp;
+  }
+
+
+  Map<_Data,Uint8List> _readKeys(RandomAccessFile f) {
+    Map<_Data,Uint8List> keys = {};
+
+    final Uint8List head = _readChunkBytesSync(f, 3, 'file header');
+    final Uint8List expected_head = Uint8List.fromList([65, 69, 83]);
+    if (head.isNotEqual(expected_head)) {
+      throw AESCryptDataException('The chunk `file header` was expected to be ${expected_head.toHexString()} but found ${head.toHexString()}');
+    }
+
+    final int version_chunk = _readChunkIntSync(f, 1, 'version byte');
+    if (version_chunk == 0 || version_chunk > 2) {
+      f.closeSync();
+      throw AESCryptDataException('Unsupported version chunk: $version_chunk');
+    }
+
+    _readChunkIntSync(f, 1, 'reserved byte', 0);
+
+    // User data
+    if (version_chunk == 2) {
+      int ext_length = _readChunkIntSync(f, 2, 'extension length');
+      while (ext_length != 0) {
+        _readChunkBytesSync(f, ext_length, 'extension content');
+        ext_length = _readChunkIntSync(f, 2, 'extension length');
+      }
+    }
+
+    // Initialization Vector (IV) used for encrypting the IV and symmetric key
+    // that is actually used to encrypt the bulk of the plaintext file.
+    final Uint8List iv_1 = _readChunkBytesSync(f, 16, 'IV 1');
+    _log('IV_1', iv_1);
+
+    final Uint8List key_1 = _createKey(iv_1, _passBytes);
+    _log('KEY DERIVED FROM IV_1 & PASSWORD', key_1);
+
+    // Encrypted IV and 256-bit AES key used to encrypt the bulk of the file
+    // 16 octets - initialization vector
+    // 32 octets - encryption key
+    final Uint8List enc_keys = _readChunkBytesSync(f, 48, 'Encrypted Keys');
+    _log('ENCRYPTED KEYS', enc_keys);
+
+    // HMAC
+    final Uint8List hmac_1 = _readChunkBytesSync(f, 32, 'HMAC 1');
+    _log('HMAC_1', hmac_1);
+
+    _validateHMAC(key_1, enc_keys, hmac_1, _HmacType.HMAC1);
+
+    final Uint8List decrypted_keys = decryptData(enc_keys, iv_1, key_1);
+    _log('DECRYPTED_KEYS', decrypted_keys);
+    keys[_Data.iv2] = decrypted_keys.sublist(0, 16);
+    _log('IV_2', keys[_Data.iv2]);
+    keys[_Data.key2] = decrypted_keys.sublist(16);
+    _log('ENCRYPTION KEY 2', keys[_Data.key2]);
+
+    return keys;
   }
 
 
