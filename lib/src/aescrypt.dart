@@ -11,107 +11,94 @@ extension _HmacTypeExtension on _HmacType {
   String get name => this.toString().replaceFirst(this.runtimeType.toString() + '.', '');
 }
 
+enum _Data { head, userdata, iv1, key1, iv2, key2, enckeys, hmac1, encdata, fsmod, hmac2 }
+
 class AESCrypt {
-  static const _debug = false;
+  static const bool _debug = false;
   static const String _encFileExt = '.aes';
+  static const List<_Data> _Chunks = [ _Data.head, _Data.userdata, _Data.iv1, _Data.enckeys, _Data.hmac1, _Data.encdata, _Data.fsmod, _Data.hmac2 ];
 
   final _secureRandom = FortunaRandom();
-  final Map<String, List<int>> _user_data = {};
 
-  AESCryptFnMode _fnMode = AESCryptFnMode.auto;
+  String _password;
+  Uint8List _passBytes;
+  AESCryptFnMode _fnMode;
+  Map<String, List<int>> _userdata;
 
-  AESCrypt() {
+
+  AESCrypt([String password = '']) {
+    _password = password;
+    _passBytes = password.toUTF16BytesLE();
+
+    _fnMode = AESCryptFnMode.auto;
+    setUserData();
+
     var random = Random.secure();
     List<int> seeds = List<int>.generate(32, (i) => random.nextInt(256));
     _secureRandom.seed(KeyParameter(Uint8List.fromList(seeds)));
+  }
 
-    setUserData();
+  set password(String password) {
+    AESCryptArgumentError.checkNotNullOrEmpty(password, 'Empty password.');
+    _password = password;
+    _passBytes = password.toUTF16BytesLE();
   }
 
   void setFilenamingMode(AESCryptFnMode mode) => _fnMode = mode;
 
   void setUserData({String created_by = 'Dart aes_crypt package', String created_date = '', String created_time =''}) {
     String key;
+    _userdata = {};
     if (created_by.isNotEmpty) {
       key = 'CREATED_BY';
-      _user_data[key] = created_by.toUTF8Bytes();
-      if (key.length + _user_data[key].length + 1 > 255) {
+      _userdata[key] = created_by.toUTF8Bytes();
+      if (key.length + _userdata[key].length + 1 > 255) {
         throw AESCryptArgumentError('User data `$key` is too long. Total length should not exceed 255 bytes.');
       }
     }
     if (created_date.isNotEmpty) {
       key = 'CREATED_DATE';
-      _user_data[key] = created_date.toUTF8Bytes();
-      if (key.length + _user_data[key].length + 1 > 255) {
+      _userdata[key] = created_date.toUTF8Bytes();
+      if (key.length + _userdata[key].length + 1 > 255) {
         throw AESCryptArgumentError('User data `$key` is too long. Total length should not exceed 255 bytes.');
       }
     }
     if (created_time.isNotEmpty) {
       key = 'CREATED_TIME';
-      _user_data[key] = created_time.toUTF8Bytes();
-      if (key.length + _user_data[key].length + 1 > 255) {
+      _userdata[key] = created_time.toUTF8Bytes();
+      if (key.length + _userdata[key].length + 1 > 255) {
         throw AESCryptArgumentError('User data `$key` is too long. Total length should not exceed 255 bytes.');
       }
     }
   }
 
 
-  String encryptDataToFileSync(String passphrase, List<int> source_data, String dest_file) {
+  String encryptDataToFileSync(List<int> source_data, String dest_file) {
     dest_file = dest_file.trim();
 
-    AESCryptArgumentError.checkNotNullOrEmpty(passphrase, 'Empty passphrase.');
+    AESCryptArgumentError.checkNotNullOrEmpty(_password, 'Empty password.');
     AESCryptArgumentError.checkNotNullOrEmpty(dest_file, 'Empty encrypted file path.');
 
     _log('ENCRYPTION', 'Started');
 
-    final Uint8List pass = passphrase.toUTF16BytesLE();
-    _log('PASSPHRASE', pass);
+    Map<_Data, Uint8List> dp = _createDataParts();
 
-    final Uint8List header = Uint8List.fromList(<int>[65, 69, 83, 2, 0]);
+    // Prepare data for encryption
 
-    final Uint8List userdata_bin = _getBinaryUserData();
-
-    // Create a random IV using the aes implementation
-    // IV is based on the block size which is 128 bits (16 bytes) for AES
-    final Uint8List iv_1 = _createIV();
-    _log('IV_1', iv_1);
-
-    // Use this IV and password to generate the first encryption key
-    // We don't need to use AES for this as its just lots of sha hashing
-    final Uint8List enc_key_1 = _createKey(iv_1, pass);
-    _log('KEY_1', enc_key_1);
-
-    // Create another set of keys to do the actual file encryption
-    final Uint8List iv_2 = _createIV();
-    _log('IV_2', iv_2);
-
-    // The file format uses AES 256 (which is the key length)
-    final Uint8List enc_key_2 = createRandomKey();
-    _log('KEY_2', enc_key_2);
-
-    // Encrypt the second set of keys using the first keys
-    final Uint8List encrypted_keys = encryptData(iv_2.addList(enc_key_2), iv_1, enc_key_1);
-    _log('ENCRYPTED KEYS', encrypted_keys);
-
-    // Calculate HMAC1 using the first enc key
-    final Uint8List hmac_1 = _hmacSha256(enc_key_1, encrypted_keys);
-    _log('HMAC_1', hmac_1);
-
-    // Do data encryption
-
-    final Uint8List file_size_modulo = Uint8List.fromList([source_data.length % 16]);
-    _log('FILE SIZE MODULO', file_size_modulo);
+    dp[_Data.fsmod] = Uint8List.fromList([source_data.length % 16]);
+    _log('FILE SIZE MODULO', dp[_Data.fsmod]);
 
     final Uint8List source_data_padded = Uint8List(source_data.length + (16 - source_data.length % 16));
     source_data_padded.setAll(0, source_data);
-    final Uint8List encrypted_data = encryptData(source_data_padded, iv_2, enc_key_2);
+
+    // Encrypt data
+
+    dp[_Data.encdata] = encryptData(source_data_padded, dp[_Data.iv2], dp[_Data.key2]);
     source_data_padded.fillByZero();
-    final Uint8List hmac_2 = _hmacSha256(enc_key_2, encrypted_data);
-    _log('HMAC2', hmac_2);
+    dp[_Data.hmac2] = _hmacSha256(dp[_Data.key2], dp[_Data.encdata]);
+    _log('HMAC2', dp[_Data.hmac2]);
 
     // Write encrypted data to file
-
-    List<Uint8List> datablocks = [header, userdata_bin, iv_1, encrypted_keys, hmac_1, encrypted_data, file_size_modulo, hmac_2];
 
     dest_file = _modifyDestinationFilename(dest_file);
     File outFile = File(dest_file);
@@ -122,25 +109,25 @@ class AESCrypt {
       throw AESCryptIOException('Failed to open file $dest_file for writing.', e.path, e.osError);
     }
     try {
-      datablocks.forEach((d) { raf.writeFromSync(d); });
+      _Chunks.forEach((c) { raf.writeFromSync(dp[c]); });
     } on FileSystemException catch(e) {
       raf.closeSync();
-      datablocks.forEach((d) { d.fillByZero(); });
+      dp.values.forEach((v) { v.fillByZero(); });
       throw AESCryptIOException('Failed to write encrypted data to file $dest_file.', e.path, e.osError);
     }
     raf.closeSync();
 
-    datablocks.forEach((d) { d.fillByZero(); });
+    dp.values.forEach((v) { v.fillByZero(); });
     _log('ENCRYPTION', 'Complete');
     return dest_file;
   }
 
 
-  String encryptFileSync(String passphrase, String source_file, [String dest_file = '']) {
+  String encryptFileSync(String source_file, [String dest_file = '']) {
     source_file = source_file.trim();
     dest_file = dest_file.trim();
 
-    AESCryptArgumentError.checkNotNullOrEmpty(passphrase, 'Empty passphrase.');
+    AESCryptArgumentError.checkNotNullOrEmpty(_password, 'Empty password.');
     AESCryptArgumentError.checkNotNullOrEmpty(source_file, 'Empty source file path.');
     if (source_file == dest_file) throw AESCryptArgumentError('Source file path and encrypted file path are the same.');
 
@@ -153,46 +140,15 @@ class AESCrypt {
 
     _log('ENCRYPTION', 'Started');
 
-    final Uint8List pass = passphrase.toUTF16BytesLE();
-    _log('PASSPHRASE', pass);
+    Map<_Data, Uint8List> dp = _createDataParts();
 
-    final Uint8List header = Uint8List.fromList(<int>[65, 69, 83, 2, 0]);
-
-    final Uint8List userdata_bin = _getBinaryUserData();
-
-    // Create a random IV using the aes implementation
-    // IV is based on the block size which is 128 bits (16 bytes) for AES
-    final Uint8List iv_1 = _createIV();
-    _log('IV_1', iv_1);
-
-    // Use this IV and password to generate the first encryption key
-    // We don't need to use AES for this as its just lots of sha hashing
-    final Uint8List enc_key_1 = _createKey(iv_1, pass);
-    _log('KEY_1', enc_key_1);
-
-    // Create another set of keys to do the actual file encryption
-    final Uint8List iv_2 = _createIV();
-    _log('IV_2', iv_2);
-
-    // The file format uses AES 256 (which is the key length)
-    final Uint8List enc_key_2 = createRandomKey();
-    _log('KEY_2', enc_key_2);
-
-    // Encrypt the second set of keys using the first keys
-    final Uint8List encrypted_keys = encryptData(iv_2.addList(enc_key_2), iv_1, enc_key_1);
-    _log('ENCRYPTED KEYS', encrypted_keys);
-
-    // Calculate HMAC1 using the first enc key
-    final Uint8List hmac_1 = _hmacSha256(enc_key_1, encrypted_keys);
-    _log('HMAC_1', hmac_1);
-
-    // Do file encryption
+    // Read file data for encryption
 
     int inFileLength = inFile.lengthSync();
-    final Uint8List source_data = Uint8List(inFileLength + (16 - inFileLength % 16));
+    final Uint8List source_data_padded = Uint8List(inFileLength + (16 - inFileLength % 16));
 
-    final Uint8List file_size_modulo = Uint8List.fromList([inFileLength % 16]);
-    _log('FILE SIZE MODULO', file_size_modulo);
+    dp[_Data.fsmod] = Uint8List.fromList([inFileLength % 16]);
+    _log('FILE SIZE MODULO', dp[_Data.fsmod]);
 
     RandomAccessFile f;
     try {
@@ -201,21 +157,21 @@ class AESCrypt {
       throw AESCryptIOException('Failed to open file $source_file for reading.', e.path, e.osError);
     }
     try {
-      f.readIntoSync(source_data);
+      f.readIntoSync(source_data_padded);
     } on FileSystemException catch(e) {
       f.closeSync();
       throw AESCryptIOException('Failed to read file $source_file', e.path, e.osError);
     }
     f.closeSync();
 
-    final Uint8List encrypted_data = encryptData(source_data, iv_2, enc_key_2);
-    source_data.fillByZero();
-    final Uint8List hmac_2 = _hmacSha256(enc_key_2, encrypted_data);
-    _log('HMAC2', hmac_2);
+    // Encrypt data
+
+    dp[_Data.encdata] = encryptData(source_data_padded, dp[_Data.iv2], dp[_Data.key2]);
+    source_data_padded.fillByZero();
+    dp[_Data.hmac2] = _hmacSha256(dp[_Data.key2], dp[_Data.encdata]);
+    _log('HMAC2', dp[_Data.hmac2]);
 
     // Write encrypted data to file
-
-    List<Uint8List> datablocks = [header, userdata_bin, iv_1, encrypted_keys, hmac_1, encrypted_data, file_size_modulo, hmac_2];
 
     dest_file = _makeDestFilenameFromSource(source_file, dest_file, _Action.encrypting);
     File outFile = File(dest_file);
@@ -224,29 +180,30 @@ class AESCrypt {
       raf = outFile.openSync(mode: FileMode.writeOnlyAppend);
     } on FileSystemException catch(e) {
       throw AESCryptIOException('Failed to open file $dest_file for writing.', e.path, e.osError);
-    } try {
-      datablocks.forEach((d) { raf.writeFromSync(d); });
+    }
+    try {
+      _Chunks.forEach((c) { raf.writeFromSync(dp[c]); });
     } on FileSystemException catch(e) {
       raf.closeSync();
-      datablocks.forEach((d) { d.fillByZero(); });
+      dp.values.forEach((v) { v.fillByZero(); });
       throw AESCryptIOException('Failed to write encrypted data to file $dest_file.', e.path, e.osError);
     }
     raf.closeSync();
 
-    datablocks.forEach((d) { d.fillByZero(); });
+    dp.values.forEach((v) { v.fillByZero(); });
     _log('ENCRYPTION', 'Complete');
     return dest_file;
   }
 
 
-  Uint8List decryptDataFromFileSync(String passphrase, String source_file) {
+  Uint8List decryptDataFromFileSync(String source_file) {
     Uint8List decrypted_data_full;
     RandomAccessFile f;
     int file_size_modulo;
 
     source_file = source_file.trim();
 
-    AESCryptArgumentError.checkNotNullOrEmpty(passphrase, 'Empty passphrase.');
+    AESCryptArgumentError.checkNotNullOrEmpty(_password, 'Empty password.');
     AESCryptArgumentError.checkNotNullOrEmpty(source_file, 'Empty source file path.');
 
     File inFile = File(source_file);
@@ -261,6 +218,8 @@ class AESCrypt {
     }
 
     _log('DECRYPTION', 'Started');
+
+    _log('PASSWORD', _passBytes);
 
     final Uint8List head = _readChunkBytesSync(f, 3, 'file header');
     final Uint8List expected_head = Uint8List.fromList([65, 69, 83]);
@@ -282,10 +241,7 @@ class AESCrypt {
         final Uint8List hmac = _readChunkBytesSync(f, 32, 'HMAC');
         _log('HMAC', hmac);
 
-        final Uint8List pass = passphrase.toUTF16BytesLE();
-        _log('PASSPHRASE', pass);
-
-        final Uint8List enc_keys = _createKey(iv, pass);
+        final Uint8List enc_keys = _createKey(iv, _passBytes);
         _log('ENCRYPTED KEYS', enc_keys);
 
         decrypted_data_full = decryptData(encrypted_data, iv, enc_keys);
@@ -322,11 +278,8 @@ class AESCrypt {
         final Uint8List hmac_1 = _readChunkBytesSync(f, 32, 'HMAC 1');
         _log('HMAC_1', hmac_1);
 
-        final Uint8List pass = passphrase.toUTF16BytesLE();
-        _log('PASSPHRASE', pass);
-
-        final Uint8List enc_key_1 = _createKey(iv_1, pass);
-        _log('KEY DERIVED FROM IV_1 & PASSPHRASE', enc_key_1);
+        final Uint8List enc_key_1 = _createKey(iv_1, _passBytes);
+        _log('KEY DERIVED FROM IV_1 & PASSWORD', enc_key_1);
 
         _validateHMAC(enc_key_1, enc_keys, hmac_1, _HmacType.HMAC1);
 
@@ -366,7 +319,7 @@ class AESCrypt {
   }
 
 
-  String decryptFileSync(String passphrase, String source_file, [String dest_file = '']) {
+  String decryptFileSync(String source_file, [String dest_file = '']) {
     Uint8List decrypted_data_full;
     RandomAccessFile f;
     int file_size_modulo;
@@ -374,7 +327,7 @@ class AESCrypt {
     source_file = source_file.trim();
     dest_file = dest_file.trim();
 
-    AESCryptArgumentError.checkNotNullOrEmpty(passphrase, 'Empty passphrase.');
+    AESCryptArgumentError.checkNotNullOrEmpty(_password, 'Empty password.');
     AESCryptArgumentError.checkNotNullOrEmpty(source_file, 'Empty source file path.');
     if (source_file == dest_file) throw AESCryptArgumentError('Source file path and decrypted file path are the same.');
 
@@ -384,6 +337,8 @@ class AESCrypt {
     }
 
     _log('DECRYPTION', 'Started');
+
+    _log('PASSWORD', _passBytes);
 
     try {
       f = inFile.openSync(mode: FileMode.read);
@@ -411,10 +366,7 @@ class AESCrypt {
         final Uint8List hmac = _readChunkBytesSync(f, 32, 'HMAC');
         _log('HMAC', hmac);
 
-        final Uint8List pass = passphrase.toUTF16BytesLE();
-        _log('PASSPHRASE', pass);
-
-        final Uint8List enc_keys = _createKey(iv, pass);
+        final Uint8List enc_keys = _createKey(iv, _passBytes);
         _log('ENCRYPTED KEYS', enc_keys);
 
         decrypted_data_full = decryptData(encrypted_data, iv, enc_keys);
@@ -451,11 +403,8 @@ class AESCrypt {
         final Uint8List hmac_1 = _readChunkBytesSync(f, 32, 'HMAC 1');
         _log('HMAC_1', hmac_1);
 
-        final Uint8List pass = passphrase.toUTF16BytesLE();
-        _log('PASSPHRASE', pass);
-
-        final Uint8List enc_key_1 = _createKey(iv_1, pass);
-        _log('KEY DERIVED FROM IV_1 & PASSPHRASE', enc_key_1);
+        final Uint8List enc_key_1 = _createKey(iv_1, _passBytes);
+        _log('KEY DERIVED FROM IV_1 & PASSWORD', enc_key_1);
 
         _validateHMAC(enc_key_1, enc_keys, hmac_1, _HmacType.HMAC1);
 
@@ -516,7 +465,7 @@ class AESCrypt {
     List<int> output = [];
 
     int len;
-    for (MapEntry<String, List<int>> me in _user_data.entries) {
+    for (MapEntry<String, List<int>> me in _userdata.entries) {
       len = me.key.length + 1 + me.value.length;
       output.addAll([0, len]);
       output.addAll([...utf8.encode(me.key), 0, ...me.value]);
@@ -587,6 +536,43 @@ class AESCrypt {
 
 
 //************************** PRIVATE MEMBERS **************************
+
+  Map<_Data, Uint8List> _createDataParts() {
+    Map<_Data, Uint8List> dp = {};
+
+    _log('PASSWORD', _passBytes);
+
+    dp[_Data.head] = Uint8List.fromList(<int>[65, 69, 83, 2, 0]);
+
+    dp[_Data.userdata] = _getBinaryUserData();
+
+    // Create a random IV using the aes implementation
+    // IV is based on the block size which is 128 bits (16 bytes) for AES
+    dp[_Data.iv1] = _createIV();
+    _log('IV_1', dp[_Data.iv1]);
+
+    // Use this IV and password to generate the first encryption key
+    // We don't need to use AES for this as its just lots of sha hashing
+    dp[_Data.key1] = _createKey(dp[_Data.iv1], _passBytes);
+    _log('KEY_1', dp[_Data.key1]);
+
+    // Create another set of keys to do the actual file encryption
+    dp[_Data.iv2] = _createIV();
+    _log('IV_2', dp[_Data.iv2]);
+    dp[_Data.key2] = createRandomKey();
+    _log('KEY_2', dp[_Data.key2]);
+
+    // Encrypt the second set of keys using the first keys
+    dp[_Data.enckeys] = encryptData(dp[_Data.iv2].addList(dp[_Data.key2]), dp[_Data.iv1], dp[_Data.key1]);
+    _log('ENCRYPTED KEYS', dp[_Data.enckeys]);
+
+    // Calculate HMAC1 using the first enc key
+    dp[_Data.hmac1] = _hmacSha256(dp[_Data.key1], dp[_Data.enckeys]);
+    _log('HMAC_1', dp[_Data.hmac1]);
+
+    return dp;
+  }
+
 
   String _makeDestFilenameFromSource(String source_file, String dest_file, _Action action) {
     assert(!source_file.isNullOrEmpty);
@@ -686,6 +672,7 @@ class AESCrypt {
   }
 
   Uint8List _createKey(Uint8List iv, Uint8List pass) {
+    assert(iv != null);
     Uint8List key = Uint8List(32);
     key.setAll(0, iv);
     int len = 32 + pass.length;

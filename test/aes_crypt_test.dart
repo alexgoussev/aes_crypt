@@ -8,15 +8,15 @@ import 'package:test/test.dart';
 void main() {
   AESCrypt aes = AESCrypt();
 
-  String passphrase = 'passw 密碼 パスワード пароль كلمة السر';
+  aes.password = 'passw 密碼 パスワード пароль كلمة السر';
 
   group('A group of tests', () {
     test('Test `encryptFile` and `decryptFile` functions', () {
       String dec_filepath = './test/testfile1.txt';
       String source_data1 = File(dec_filepath).readAsStringSync();
 
-      String enc_filepath = aes.encryptFileSync(passphrase, dec_filepath);
-      dec_filepath = aes.decryptFileSync(passphrase, enc_filepath);
+      String enc_filepath = aes.encryptFileSync(dec_filepath);
+      dec_filepath = aes.decryptFileSync(enc_filepath);
       File(enc_filepath).deleteSync();
       String source_data2 = File(dec_filepath).readAsStringSync();
       File(dec_filepath).deleteSync();
@@ -29,10 +29,8 @@ void main() {
           'мюмзики в мове. (Jabberwocky by Lewis Carroll, russian translation)';
       String enc_filepath = './test/testfile2.txt.aes';
 
-      enc_filepath = aes.encryptDataToFileSync(
-          passphrase, utf8.encode(source_string), enc_filepath);
-      Uint8List decrypted_data =
-          aes.decryptDataFromFileSync(passphrase, enc_filepath);
+      enc_filepath = aes.encryptDataToFileSync(utf8.encode(source_string), enc_filepath);
+      Uint8List decrypted_data = aes.decryptDataFromFileSync(enc_filepath);
       File(enc_filepath).deleteSync();
       String decrypted_string = utf8.decode(decrypted_data);
 

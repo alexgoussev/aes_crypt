@@ -6,7 +6,6 @@ import 'package:aes_crypt/aes_crypt.dart';
 void main() {
   Uint8List decrypted_data;
   String decrypted_string;
-  String passphrase = 'пассворд';
   String source_string =
       'Варкалось. Хливкие шорьки пырялись по наве, и хрюкотали зелюки, как мюмзики в мове. '
       'Twas brillig, and the slithy toves did gyre and gimble in the wabe: All mimsy were the borogoves, and the mome raths outgrabe.';
@@ -15,9 +14,10 @@ void main() {
   print('Source string: $source_string');
 
   var aes = AESCrypt();
+  aes.password = 'пассворд';
 
   try {
-    enc_filepath = aes.encryptDataToFileSync(passphrase, utf8.encode(source_string), enc_filepath);
+    enc_filepath = aes.encryptDataToFileSync(utf8.encode(source_string), enc_filepath);
   } on AESCryptException catch (e) {
     print('Error: $e');
     return;
@@ -25,7 +25,7 @@ void main() {
   print('Encrypted file: $enc_filepath');
 
   try {
-    decrypted_data = aes.decryptDataFromFileSync(passphrase, enc_filepath);
+    decrypted_data = aes.decryptDataFromFileSync(enc_filepath);
   } on AESCryptException catch (e) {
     print('Error: $e');
     return;
