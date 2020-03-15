@@ -34,10 +34,9 @@ extension _StringExtension on String {
   /// Returns true if string is: null or empty
   bool get isNullOrEmpty => this == null || this.isEmpty;
 
+  // https://stackoverflow.com/questions/28565242/convert-uint8list-to-string-with-dart
+  // https://unicode.org/faq/utf_bom.html#utf16-4
   /// Converts UTF-16 string to bytes (Low Endian order)
-  ///
-  /// https://stackoverflow.com/questions/28565242/convert-uint8list-to-string-with-dart
-  /// https://unicode.org/faq/utf_bom.html#utf16-4
   Uint8List toUTF16BytesLE() {
     List<int> list = [];
     this.runes.forEach((rune) {

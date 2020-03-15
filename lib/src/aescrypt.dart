@@ -1,8 +1,15 @@
 part of aes_crypt;
 
+enum AESCryptFnMode { auto, warn, overwrite }
+
+enum AESCryptExceptionType { destFileExists }
+
 enum _Action { encrypting, decripting }
 
-enum AESCryptFnMode { auto, warn, overwrite }
+enum _HmacType { HMAC, HMAC1, HMAC2 }
+extension _HmacTypeExtension on _HmacType {
+  String get name => this.toString().replaceFirst(this.runtimeType.toString() + '.', '');
+}
 
 class AESCrypt {
   static const _debug = false;
@@ -29,33 +36,31 @@ class AESCrypt {
       key = 'CREATED_BY';
       _user_data[key] = created_by.toUTF8Bytes();
       if (key.length + _user_data[key].length + 1 > 255) {
-        throw AESCryptException('User data `$key` is too long. Maximum total size of user data is 255 bytes.');
+        throw AESCryptArgumentError('User data `$key` is too long. Total length should not exceed 255 bytes.');
       }
     }
     if (created_date.isNotEmpty) {
       key = 'CREATED_DATE';
       _user_data[key] = created_date.toUTF8Bytes();
       if (key.length + _user_data[key].length + 1 > 255) {
-        throw AESCryptException('User data `$key` is too long. Maximum total size of user data is 255 bytes.');
+        throw AESCryptArgumentError('User data `$key` is too long. Total length should not exceed 255 bytes.');
       }
     }
     if (created_time.isNotEmpty) {
       key = 'CREATED_TIME';
       _user_data[key] = created_time.toUTF8Bytes();
       if (key.length + _user_data[key].length + 1 > 255) {
-        throw AESCryptException('User data `$key` is too long. Maximum total size of user data is 255 bytes.');
+        throw AESCryptArgumentError('User data `$key` is too long. Total length should not exceed 255 bytes.');
       }
     }
   }
 
 
   String encryptDataToFileSync(String passphrase, List<int> source_data, String dest_file) {
-    if (passphrase.isNullOrEmpty) {
-      throw AESCryptException('Empty passphrase is not allowed');
-    }
-    if (dest_file.isNullOrEmpty) {
-      throw AESCryptException('Empty encrypted file path');
-    }
+    dest_file = dest_file.trim();
+
+    AESCryptArgumentError.checkNotNullOrEmpty(passphrase, 'Empty passphrase.');
+    AESCryptArgumentError.checkNotNullOrEmpty(dest_file, 'Empty encrypted file path.');
 
     _log('ENCRYPTION', 'Started');
 
@@ -92,65 +97,58 @@ class AESCrypt {
     final Uint8List hmac_1 = _hmacSha256(enc_key_1, encrypted_keys);
     _log('HMAC_1', hmac_1);
 
-    // Do file encryption
-
-    final Uint8List source_data_padded = Uint8List(source_data.length + (16 - source_data.length % 16));
-    source_data_padded.setAll(0, source_data);
-
-    final Uint8List encrypted_data = encryptData(source_data_padded, iv_2, enc_key_2);
-    source_data_padded.fillByZero();
+    // Do data encryption
 
     final Uint8List file_size_modulo = Uint8List.fromList([source_data.length % 16]);
     _log('FILE SIZE MODULO', file_size_modulo);
 
+    final Uint8List source_data_padded = Uint8List(source_data.length + (16 - source_data.length % 16));
+    source_data_padded.setAll(0, source_data);
+    final Uint8List encrypted_data = encryptData(source_data_padded, iv_2, enc_key_2);
+    source_data_padded.fillByZero();
     final Uint8List hmac_2 = _hmacSha256(enc_key_2, encrypted_data);
     _log('HMAC2', hmac_2);
+
+    // Write encrypted data to file
+
+    List<Uint8List> datablocks = [header, userdata_bin, iv_1, encrypted_keys, hmac_1, encrypted_data, file_size_modulo, hmac_2];
 
     dest_file = _modifyDestinationFilename(dest_file);
     File outFile = File(dest_file);
     RandomAccessFile raf;
     try {
       raf = outFile.openSync(mode: FileMode.writeOnlyAppend);
-    } on FileSystemException {
-      throw new AESCryptException('Could not open $dest_file in `write` mode');
+    } on FileSystemException catch(e) {
+      throw AESCryptIOException('Failed to open file $dest_file for writing.', e.path, e.osError);
     }
-    List<Uint8List> datablocks = [header, userdata_bin, iv_1, encrypted_keys, hmac_1, encrypted_data, file_size_modulo, hmac_2];
     try {
-      datablocks.forEach((e) { raf.writeFromSync(e); });
-    } on FileSystemException {
+      datablocks.forEach((d) { raf.writeFromSync(d); });
+    } on FileSystemException catch(e) {
       raf.closeSync();
-      datablocks.forEach((e) { e.fillByZero(); });
-      throw new AESCryptException('Could not write encrypted data to file $dest_file');
+      datablocks.forEach((d) { d.fillByZero(); });
+      throw AESCryptIOException('Failed to write encrypted data to file $dest_file.', e.path, e.osError);
     }
-
     raf.closeSync();
-    datablocks.forEach((e) { e.fillByZero(); });
+
+    datablocks.forEach((d) { d.fillByZero(); });
     _log('ENCRYPTION', 'Complete');
     return dest_file;
   }
 
 
   String encryptFileSync(String passphrase, String source_file, [String dest_file = '']) {
-    if (passphrase.isNullOrEmpty) {
-      throw AESCryptException('Empty passphrase is not allowed');
-    }
-
     source_file = source_file.trim();
     dest_file = dest_file.trim();
 
-    if (source_file.isNullOrEmpty) {
-      throw AESCryptException('Empty source file path');
-    }
-    if (source_file == dest_file) {
-      throw AESCryptException('Source file path and encrypted file path are the same');
-    }
+    AESCryptArgumentError.checkNotNullOrEmpty(passphrase, 'Empty passphrase.');
+    AESCryptArgumentError.checkNotNullOrEmpty(source_file, 'Empty source file path.');
+    if (source_file == dest_file) throw AESCryptArgumentError('Source file path and encrypted file path are the same.');
 
-    File inFile = new File(source_file);
+    File inFile = File(source_file);
     if (!inFile.existsSync()) {
-      throw AESCryptException('Source file $source_file does not exists');
-    }
-    if (!inFile.isReadable()) {
-      throw AESCryptException('Source file $source_file is not readable');
+      throw AESCryptIOException('Source file $source_file does not exist.', source_file);
+    } else if (!inFile.isReadable()) {
+      throw AESCryptIOException('Source file $source_file is not readable.', source_file);
     }
 
     _log('ENCRYPTION', 'Started');
@@ -192,42 +190,50 @@ class AESCrypt {
 
     int inFileLength = inFile.lengthSync();
     final Uint8List source_data = Uint8List(inFileLength + (16 - inFileLength % 16));
-    try {
-      var raf = inFile.openSync(mode: FileMode.read);
-      raf.readIntoSync(source_data);
-      raf.closeSync();
-    } on FileSystemException {
-      throw AESCryptException('Cannot read file content: $source_file');
-    }
-
-    final Uint8List encrypted_data = encryptData(source_data, iv_2, enc_key_2);
-    source_data.fillByZero();
 
     final Uint8List file_size_modulo = Uint8List.fromList([inFileLength % 16]);
     _log('FILE SIZE MODULO', file_size_modulo);
 
+    RandomAccessFile f;
+    try {
+      f = inFile.openSync(mode: FileMode.read);
+    } on FileSystemException catch(e) {
+      throw AESCryptIOException('Failed to open file $source_file for reading.', e.path, e.osError);
+    }
+    try {
+      f.readIntoSync(source_data);
+    } on FileSystemException catch(e) {
+      f.closeSync();
+      throw AESCryptIOException('Failed to read file $source_file', e.path, e.osError);
+    }
+    f.closeSync();
+
+    final Uint8List encrypted_data = encryptData(source_data, iv_2, enc_key_2);
+    source_data.fillByZero();
     final Uint8List hmac_2 = _hmacSha256(enc_key_2, encrypted_data);
     _log('HMAC2', hmac_2);
+
+    // Write encrypted data to file
+
+    List<Uint8List> datablocks = [header, userdata_bin, iv_1, encrypted_keys, hmac_1, encrypted_data, file_size_modulo, hmac_2];
 
     dest_file = _makeDestFilenameFromSource(source_file, dest_file, _Action.encrypting);
     File outFile = File(dest_file);
     RandomAccessFile raf;
     try {
       raf = outFile.openSync(mode: FileMode.writeOnlyAppend);
-    } on FileSystemException {
-      throw new AESCryptException('Could not open $dest_file in `write` mode');
-    }
-    List<Uint8List> datablocks = [header, userdata_bin, iv_1, encrypted_keys, hmac_1, encrypted_data, file_size_modulo, hmac_2];
-    try {
-      datablocks.forEach((e) { raf.writeFromSync(e); });
-    } on FileSystemException {
+    } on FileSystemException catch(e) {
+      throw AESCryptIOException('Failed to open file $dest_file for writing.', e.path, e.osError);
+    } try {
+      datablocks.forEach((d) { raf.writeFromSync(d); });
+    } on FileSystemException catch(e) {
       raf.closeSync();
-      datablocks.forEach((e) { e.fillByZero(); });
-      throw new AESCryptException('Could not write encrypted data to file $dest_file');
+      datablocks.forEach((d) { d.fillByZero(); });
+      throw AESCryptIOException('Failed to write encrypted data to file $dest_file.', e.path, e.osError);
     }
-
     raf.closeSync();
-    datablocks.forEach((e) { e.fillByZero(); });
+
+    datablocks.forEach((d) { d.fillByZero(); });
     _log('ENCRYPTION', 'Complete');
     return dest_file;
   }
@@ -240,18 +246,18 @@ class AESCrypt {
 
     source_file = source_file.trim();
 
-    if (passphrase.isNullOrEmpty) {
-      throw AESCryptException('Empty passphrase is not allowed');
-    }
-    if (source_file.isNullOrEmpty) {
-      throw AESCryptException('Empty encrypted file path');
-    }
+    AESCryptArgumentError.checkNotNullOrEmpty(passphrase, 'Empty passphrase.');
+    AESCryptArgumentError.checkNotNullOrEmpty(source_file, 'Empty source file path.');
+
     File inFile = File(source_file);
     if (!inFile.existsSync()) {
-      throw AESCryptException('Source file $source_file does not exist');
+      throw AESCryptIOException('Source file $source_file does not exist.');
     }
-    try { f = inFile.openSync(mode: FileMode.read); } on FileSystemException {
-      throw AESCryptException('Cannot open file for reading: $source_file');
+
+    try {
+      f = inFile.openSync(mode: FileMode.read);
+    } on FileSystemException catch(e) {
+      throw AESCryptIOException('Failed to open file $source_file for reading.', e.path, e.osError);
     }
 
     _log('DECRYPTION', 'Started');
@@ -259,15 +265,15 @@ class AESCrypt {
     final Uint8List head = _readChunkBytesSync(f, 3, 'file header');
     final Uint8List expected_head = Uint8List.fromList([65, 69, 83]);
     if (head.isNotEqual(expected_head)) {
-      throw AESCryptException('The chunk `file header` was expected to be ${expected_head.toHexString()} but found ${head.toHexString()}');
+      throw AESCryptDataException('The chunk `file header` was expected to be ${expected_head.toHexString()} but found ${head.toHexString()}');
     }
 
     final int version_chunk = _readChunkIntSync(f, 1, 'version byte');
     switch(version_chunk) {
-      case 0: // This file uses version 0 of the standard
+      case 0: // file version 0
         file_size_modulo = _readChunkIntSync(f, 1, 'file size modulo');
         if (file_size_modulo < 0 || file_size_modulo >= 16) {
-          throw AESCryptException('Invalid file size modulo: $file_size_modulo');
+          throw AESCryptDataException('Invalid file size modulo: $file_size_modulo');
         }
 
         final Uint8List iv = _readChunkBytesSync(f, 16, 'IV');
@@ -276,7 +282,6 @@ class AESCrypt {
         final Uint8List hmac = _readChunkBytesSync(f, 32, 'HMAC');
         _log('HMAC', hmac);
 
-        //Start with the IV padded to 32 bytes
         final Uint8List pass = passphrase.toUTF16BytesLE();
         _log('PASSPHRASE', pass);
 
@@ -285,23 +290,23 @@ class AESCrypt {
 
         decrypted_data_full = decryptData(encrypted_data, iv, enc_keys);
 
-        // TODO: Test this using known encrypted files using version 0
         // Here the HMAC is (probably) used to verify the decrypted data
-        _validateHMAC(enc_keys, decrypted_data_full, hmac, 'HMAC');
+        // Test this using known encrypted files using version 0
+        _validateHMAC(enc_keys, decrypted_data_full, hmac, _HmacType.HMAC);
         break;
-      case 1: // This file uses version 1 of the standard
-      case 2: // This file uses version 2 of the standard (The latest standard at the time of writing)
-      // Reserved (set to 0x00)
+      case 1: // file version 1
+      case 2: // file version 2
         _readChunkIntSync(f, 1, 'reserved byte', 0);
 
+        // User data
         if (version_chunk == 2) {
-          // User data
           int ext_length = _readChunkIntSync(f, 2, 'extension length');
           while (ext_length != 0) {
             _readChunkBytesSync(f, ext_length, 'extension content');
             ext_length = _readChunkIntSync(f, 2, 'extension length');
           }
         }
+
         // Initialization Vector (IV) used for encrypting the IV and symmetric key
         // that is actually used to encrypt the bulk of the plaintext file.
         final Uint8List iv_1 = _readChunkBytesSync(f, 16, 'IV 1');
@@ -323,7 +328,7 @@ class AESCrypt {
         final Uint8List enc_key_1 = _createKey(iv_1, pass);
         _log('KEY DERIVED FROM IV_1 & PASSPHRASE', enc_key_1);
 
-        _validateHMAC(enc_key_1, enc_keys, hmac_1, 'HMAC 1');
+        _validateHMAC(enc_key_1, enc_keys, hmac_1, _HmacType.HMAC1);
 
         final Uint8List encrypted_data = _readChunkBytesSync(f, f.lengthSync() - f.positionSync() - 33, 'encrypted data');
         _log('ENCRYPTED DATA', encrypted_data);
@@ -331,7 +336,7 @@ class AESCrypt {
         file_size_modulo = _readChunkIntSync(f, 1, 'file size modulo');
         _log('FILE SIZE MODULO', file_size_modulo);
         if (file_size_modulo < 0 || file_size_modulo >= 16) {
-          throw AESCryptException('Invalid file size modulos: $file_size_modulo');
+          throw AESCryptDataException('Invalid file size modulos: $file_size_modulo');
         }
 
         final Uint8List hmac_2 = _readChunkBytesSync(f, 32, 'HMAC 2');
@@ -344,14 +349,13 @@ class AESCrypt {
         final Uint8List enc_key_2 = decrypted_keys.sublist(16);
         _log('ENCRYPTION KEY 2', enc_key_2);
 
-        _validateHMAC(enc_key_2, encrypted_data, hmac_2, 'HMAC 2');
+        _validateHMAC(enc_key_2, encrypted_data, hmac_2, _HmacType.HMAC2);
 
-        // All keys were correct, we can be sure that the decrypted data will be correct
         decrypted_data_full = decryptData(encrypted_data, iv_2, enc_key_2);
         break;
       default:
         f.closeSync();
-        throw AESCryptException('Invalid version chunk: $version_chunk');
+        throw AESCryptDataException('Invalid version chunk: $version_chunk');
     }
 
     f.closeSync();
@@ -370,36 +374,35 @@ class AESCrypt {
     source_file = source_file.trim();
     dest_file = dest_file.trim();
 
-    if (source_file.isNullOrEmpty) {
-      throw AESCryptException('Empty source file path');
-    }
-    if (source_file == dest_file) {
-      throw AESCryptException('Source file path and decrypted file path are the same');
-    }
+    AESCryptArgumentError.checkNotNullOrEmpty(passphrase, 'Empty passphrase.');
+    AESCryptArgumentError.checkNotNullOrEmpty(source_file, 'Empty source file path.');
+    if (source_file == dest_file) throw AESCryptArgumentError('Source file path and decrypted file path are the same.');
 
     File inFile = File(source_file);
     if (!inFile.existsSync()) {
-      throw AESCryptException('Source file $source_file does not exist');
+      throw FileSystemException('Source file $source_file does not exist.');
     }
 
     _log('DECRYPTION', 'Started');
 
-    try { f = inFile.openSync(mode: FileMode.read); } on FileSystemException {
-      throw AESCryptException('Cannot open file for reading: $source_file');
+    try {
+      f = inFile.openSync(mode: FileMode.read);
+    } on FileSystemException catch(e) {
+      throw FileSystemException('Failed to open file $source_file for reading.', e.path, e.osError);
     }
 
     final Uint8List head = _readChunkBytesSync(f, 3, 'file header');
     final Uint8List expected_head = Uint8List.fromList([65, 69, 83]);
     if (head.isNotEqual(expected_head)) {
-      throw AESCryptException('The chunk `file header` was expected to be ${expected_head.toHexString()} but found ${head.toHexString()}');
+      throw AESCryptDataException('The chunk `file header` was expected to be ${expected_head.toHexString()} but found ${head.toHexString()}');
     }
 
     final int version_chunk = _readChunkIntSync(f, 1, 'version byte');
     switch(version_chunk) {
-      case 0: // This file uses version 0 of the standard
+      case 0: // file version 0
         file_size_modulo = _readChunkIntSync(f, 1, 'file size modulo');
         if (file_size_modulo < 0 || file_size_modulo >= 16) {
-          throw AESCryptException('Invalid file size modulo: $file_size_modulo');
+          throw AESCryptDataException('Invalid file size modulo: $file_size_modulo');
         }
 
         final Uint8List iv = _readChunkBytesSync(f, 16, 'IV');
@@ -408,7 +411,6 @@ class AESCrypt {
         final Uint8List hmac = _readChunkBytesSync(f, 32, 'HMAC');
         _log('HMAC', hmac);
 
-        //Start with the IV padded to 32 bytes
         final Uint8List pass = passphrase.toUTF16BytesLE();
         _log('PASSPHRASE', pass);
 
@@ -417,23 +419,23 @@ class AESCrypt {
 
         decrypted_data_full = decryptData(encrypted_data, iv, enc_keys);
 
-        // TODO: Test this using known encrypted files using version 0
         // Here the HMAC is (probably) used to verify the decrypted data
-        _validateHMAC(enc_keys, decrypted_data_full, hmac, 'HMAC');
+        // Test this using known encrypted files using version 0
+        _validateHMAC(enc_keys, decrypted_data_full, hmac, _HmacType.HMAC);
         break;
-      case 1: // This file uses version 1 of the standard
-      case 2: // This file uses version 2 of the standard (The latest standard at the time of writing)
-        // Reserved (set to 0x00)
+      case 1: // file version 1
+      case 2: // file version 2
         _readChunkIntSync(f, 1, 'reserved byte', 0);
 
+        // User data
         if (version_chunk == 2) {
-          // User data
           int ext_length = _readChunkIntSync(f, 2, 'extension length');
           while (ext_length != 0) {
             _readChunkBytesSync(f, ext_length, 'extension content');
             ext_length = _readChunkIntSync(f, 2, 'extension length');
           }
         }
+
         // Initialization Vector (IV) used for encrypting the IV and symmetric key
         // that is actually used to encrypt the bulk of the plaintext file.
         final Uint8List iv_1 = _readChunkBytesSync(f, 16, 'IV 1');
@@ -455,7 +457,7 @@ class AESCrypt {
         final Uint8List enc_key_1 = _createKey(iv_1, pass);
         _log('KEY DERIVED FROM IV_1 & PASSPHRASE', enc_key_1);
 
-        _validateHMAC(enc_key_1, enc_keys, hmac_1, 'HMAC 1');
+        _validateHMAC(enc_key_1, enc_keys, hmac_1, _HmacType.HMAC1);
 
         final Uint8List encrypted_data = _readChunkBytesSync(f, f.lengthSync() - f.positionSync() - 33, 'encrypted data');
         _log('ENCRYPTED DATA', encrypted_data);
@@ -463,7 +465,7 @@ class AESCrypt {
         file_size_modulo = _readChunkIntSync(f, 1, 'file size modulo');
         _log('FILE SIZE MODULO', file_size_modulo);
         if (file_size_modulo < 0 || file_size_modulo >= 16) {
-          throw AESCryptException('Invalid file size modulos: $file_size_modulo');
+          throw AESCryptDataException('Invalid file size modulos: $file_size_modulo');
         }
 
         final Uint8List hmac_2 = _readChunkBytesSync(f, 32, 'HMAC 2');
@@ -476,14 +478,13 @@ class AESCrypt {
         final Uint8List enc_key_2 = decrypted_keys.sublist(16);
         _log('ENCRYPTION KEY 2', enc_key_2);
 
-        _validateHMAC(enc_key_2, encrypted_data, hmac_2, 'HMAC 2');
+        _validateHMAC(enc_key_2, encrypted_data, hmac_2, _HmacType.HMAC2);
 
-        // All keys were correct, we can be sure that the decrypted data will be correct
         decrypted_data_full = decryptData(encrypted_data, iv_2, enc_key_2);
         break;
       default:
         f.closeSync();
-        throw AESCryptException('Invalid version chunk: $version_chunk');
+        throw AESCryptDataException('Invalid version chunk: $version_chunk');
     }
 
     f.closeSync();
@@ -494,12 +495,15 @@ class AESCrypt {
     RandomAccessFile raf;
     try {
       raf = outFile.openSync(mode: FileMode.writeOnly);
+    } on FileSystemException catch(e) {
+      throw AESCryptIOException('Failed to open $source_file for writing.', e.path, e.osError);
+    } try {
       raf.writeFromSync(decrypted_data_full, 0, decrypted_data_full.length - (16 - file_size_modulo));
-    } on FileSystemException {
-      throw AESCryptException('Cannot write to file: $source_file');
-    } finally {
+    } on FileSystemException catch(e) {
       raf.closeSync();
+      throw AESCryptIOException('Failed to write to file $source_file.', e.path, e.osError);
     }
+    raf.closeSync();
 
     _log('DECRYPTION', 'Completed');
     decrypted_data_full.fillByZero();
@@ -537,13 +541,11 @@ class AESCrypt {
 
   Uint8List encryptData(Uint8List data, Uint8List iv, Uint8List key) {
     if (![16, 24, 32].contains(key.length)) {
-      throw AESCryptException('Invalid key length for AES. Provided ${key.length} bytes, expected 32 bytes.');
-    }
-    if (iv.length != 16) {
-      throw AESCryptException('Invalid IV length for AES. Provided ${iv.length} bytes, expected 16 bytes.');
-    }
-    if (data.length % 16 != 0) {
-      throw AESCryptException('Invalid data length ${data.length} for AES');
+      throw AESCryptArgumentError('Invalid key length for AES. Provided ${key.length} bytes, expected 32 bytes.');
+    } else if (iv.length != 16) {
+      throw AESCryptArgumentError('Invalid IV length for AES. Provided ${iv.length} bytes, expected 16 bytes.');
+    } else if (data.length % 16 != 0) {
+      throw AESCryptArgumentError('Invalid data length ${data.length} for AES.');
     }
 
     CBCBlockCipher cbc = CBCBlockCipher(AESFastEngine())
@@ -561,6 +563,14 @@ class AESCrypt {
   }
 
   Uint8List decryptData(Uint8List data, Uint8List iv, Uint8List key) {
+    if (![16, 24, 32].contains(key.length)) {
+      throw AESCryptArgumentError('Invalid key length for AES. Provided ${key.length} bytes, expected 32 bytes.');
+    } else if (iv.length != 16) {
+      throw AESCryptArgumentError('Invalid IV length for AES. Provided ${iv.length} bytes, expected 16 bytes.');
+    } else if (data.length % 16 != 0) {
+      throw AESCryptArgumentError('Invalid data length ${data.length} for AES.');
+    }
+
     CBCBlockCipher cbc = CBCBlockCipher(AESFastEngine())
       ..init(false, ParametersWithIV(KeyParameter(key), iv));
 
@@ -579,9 +589,8 @@ class AESCrypt {
 //************************** PRIVATE MEMBERS **************************
 
   String _makeDestFilenameFromSource(String source_file, String dest_file, _Action action) {
-    if (source_file.isNullOrEmpty) {
-      throw AESCryptException('Empty source file path');
-    }
+    assert(!source_file.isNullOrEmpty);
+
     if (dest_file.isNullOrEmpty) {
       switch(action) {
         case _Action.encrypting:
@@ -613,12 +622,12 @@ class AESCrypt {
         break;
       case AESCryptFnMode.warn:
         if (_isPathExists(dest_file)) {
-          throw AESCryptException('Destination file $dest_file already exists');
+          throw AESCryptException('Destination file $dest_file already exists.', AESCryptExceptionType.destFileExists);
         }
         break;
       case AESCryptFnMode.overwrite:
         if (FileSystemEntity.typeSync(dest_file) != FileSystemEntityType.file) {
-          throw AESCryptException('Destination path $dest_file is not a file and can not be overwriten');
+          throw AESCryptArgumentError('Destination path $dest_file is not a file and can not be overwriten.');
         }
         File(dest_file).deleteSync();
         break;
@@ -632,11 +641,13 @@ class AESCrypt {
     int result;
     Uint8List data;
 
-    try { data = f.readSync(num_bytes); } on FileSystemException {
-      throw AESCryptException('Could not read chunk `$chunk_name` of $num_bytes bytes');
+    try {
+      data = f.readSync(num_bytes);
+    } on FileSystemException catch(e) {
+      throw FileSystemException('Failed to read chunk `$chunk_name` of $num_bytes bytes.', e.path, e.osError);
     }
     if (data.length != num_bytes) {
-      throw AESCryptException('Could not read chunk `$chunk_name` of $num_bytes bytes, only found ${data.length} bytes');
+      throw AESCryptDataException('Failed to read chunk `$chunk_name` of $num_bytes bytes, only found ${data.length} bytes.');
     }
 
     switch (num_bytes) {
@@ -655,7 +666,7 @@ class AESCrypt {
     }
 
     if (expected_value != null && result != expected_value) {
-      throw AESCryptException('The chunk `$chunk_name` was expected to be 0x${expected_value.toRadixString(16).toUpperCase()} but found 0x${data.toHexString()}');
+      throw AESCryptDataException('The chunk `$chunk_name` was expected to be 0x${expected_value.toRadixString(16).toUpperCase()} but found 0x${data.toHexString()}');
     }
 
     return result;
@@ -663,13 +674,14 @@ class AESCrypt {
 
   Uint8List _readChunkBytesSync(RandomAccessFile f, int num_bytes, String chunk_name) {
     Uint8List data;
-    try { data = f.readSync(num_bytes); } on FileSystemException {
-      throw AESCryptException('Could not read chunk `$chunk_name` of $num_bytes bytes');
+    try {
+      data = f.readSync(num_bytes);
+    } on FileSystemException catch(e) {
+      throw AESCryptIOException('Failed to read chunk `$chunk_name` of $num_bytes bytes.', e.path, e.osError);
     }
     if (data.length != num_bytes) {
-      throw AESCryptException('Could not read chunk `$chunk_name` of $num_bytes bytes, only found ${data.length} bytes');
+      throw AESCryptDataException('Failed to read chunk `$chunk_name` of $num_bytes bytes, only found ${data.length} bytes.');
     }
-
     return data;
   }
 
@@ -687,15 +699,21 @@ class AESCrypt {
     return key;
   }
 
-  void _validateHMAC(Uint8List key, Uint8List data, Uint8List hash, String name) {
+  void _validateHMAC(Uint8List key, Uint8List data, Uint8List hash, _HmacType ht) {
     Uint8List calculated = _hmacSha256(key, data);
     if (hash.isNotEqual(calculated)) {
       _log('CALCULATED HMAC', calculated);
       _log('ACTUAL HMAC', hash);
-      if (name == 'HMAC 1') {
-        throw AESCryptException('$name failed to validate integrity of encryption keys. Incorrect password or file corrupted.');
-      } else {
-        throw AESCryptException('$name failed to validate integrity of encrypted data. The file is corrupted and should not be trusted.');
+      switch(ht) {
+        case _HmacType.HMAC1:
+          throw AESCryptDataException('Failed to validate integrity of encryption keys. Wrong `${ht.name}`. Incorrect password or corrupted file.');
+          break;
+        case _HmacType.HMAC2:
+          throw AESCryptDataException('Failed to validate integrity of encrypted data. Wrong `${ht.name}`. The file is corrupted.');
+          break;
+        case _HmacType.HMAC:
+          throw AESCryptDataException('Failed to validate integrity of decrypted data. Wrong `${ht.name}`. Incorrect password or corrupted file.');
+          break;
       }
     }
   }
@@ -715,12 +733,61 @@ class AESCrypt {
   bool _isPathExists(String path) {
     return FileSystemEntity.typeSync(path) != FileSystemEntityType.notFound;
   }
+
 }
 
 
-class AESCryptException implements Exception {
-  String msg; 
-  AESCryptException(this.msg);
+/// Error thrown when a function is passed an unacceptable argument.
+class AESCryptArgumentError extends ArgumentError {
+  /// Creates a new AESCryptArgumentError with an error message `message`
+  /// describing the erroneous argument.
+  AESCryptArgumentError(String message) : super(message);
+
+  /// Throws AESCryptArgumentError if `argument` is: null `Object`, empty `String` or empty `Iterable`
+  static void checkNotNullOrEmpty(Object argument, String message) {
+    if (
+      argument == null ||
+      ((argument is String)? argument.isEmpty : false) ||
+      ((argument is Iterable)? argument.isEmpty : false)
+    ) throw AESCryptArgumentError(message);
+  }
+}
+
+
+/// Exception thrown when a file operation fails.
+class AESCryptIOException extends FileSystemException {
+  /// Creates a new AESCryptIOException with an error message `message`,
+  /// optional file system path `path` and optional OS error `osError`.
+  const AESCryptIOException(String message, [String path = '', OSError osError]) : super(message, path, osError);
+}
+
+
+/// Exception thrown when an integrity of encrypted data is compromised.
+class AESCryptDataException implements Exception {
+  /// Message describing the problem.
+  final String message;
+
+  /// Creates a new AESCryptDataException with an error message `message`.
+  const AESCryptDataException(this.message);
+
+  /// Returns a string representation of this object.
   @override
-  String toString() => msg;
+  String toString() => message;
+}
+
+
+/// Exception thrown when ...
+class AESCryptException implements Exception {
+  /// Message describing the problem.
+  final String message;
+
+  /// Type of an exeption.
+  final AESCryptExceptionType type;
+
+  /// Creates a new AESCryptException with an error message `message` and type `type`.
+  const AESCryptException(this.message, this.type);
+
+  /// Returns a string representation of this object.
+  @override
+  String toString() => message;
 }
