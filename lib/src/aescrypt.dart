@@ -585,7 +585,7 @@ class AesCrypt {
 //****************************************************************************
 
   /// Computes the HMAC-SHA256.
-  Uint8List hmacSha256(Uint8List key, Uint8List data) {
+  Uint8List hmacSha256t(Uint8List key, Uint8List data) {
     if (key.isEmpty) throw AesCryptArgumentError('Empty key.');
 
     final Int32x4 magic_i = Int32x4(0x36363636, 0x36363636, 0x36363636, 0x36363636);
@@ -608,6 +608,30 @@ class AesCrypt {
       ..setRange(64, 64 + data.length, data);
     Uint8List temp = sha256(buff1);
 
+    Uint8List buff2 = o_pad.buffer.asUint8List()..setRange(64, 96, temp);
+    return sha256(buff2);
+  }
+
+
+  Uint8List hmacSha256(Uint8List key, Uint8List data) {
+    if (key.isEmpty) throw AesCryptArgumentError('Empty key.');
+
+    final Int32x4 magic_i = Int32x4(0x36363636, 0x36363636, 0x36363636, 0x36363636);
+    final Int32x4 magic_o = Int32x4(0x5C5C5C5C, 0x5C5C5C5C, 0x5C5C5C5C, 0x5C5C5C5C);
+    final Int32x4List i_pad = Int32x4List(4);
+    final Int32x4List o_pad = Int32x4List(6);
+
+    if (key.length > 64) key = sha256(key);
+    key = Uint8List(64)..setRange(0, key.length, key);
+
+    for (int i = 0; i < 4; i++) {
+      i_pad[i] = key.buffer.asInt32x4List()[i] ^ magic_i;
+    }
+    for (int i = 0; i < 4; i++) {
+      o_pad[i] = key.buffer.asInt32x4List()[i] ^ magic_o;
+    }
+
+    Uint8List temp = sha256(data, i_pad.buffer.asUint8List());
     Uint8List buff2 = o_pad.buffer.asUint8List()..setRange(64, 96, temp);
     return sha256(buff2);
   }
@@ -644,27 +668,35 @@ class AesCrypt {
   /// Computes SHA256.
   ///
   /// https://en.wikipedia.org/wiki/SHA-2#Pseudocode
-  Uint8List sha256(Uint8List data) {
+  Uint8List sha256(Uint8List data, [Uint8List hmacIpad]) {
     ByteData chunk;
 
     int length = data.length;
     int lengthPadded = length + 64 - ((length + 8) & 0x3F) + 8;
+    int lengthToWrite = (hmacIpad == null? length : length + 64) * 8;
 
     _h0 = 0x6a09e667; _h1 = 0xbb67ae85; _h2 = 0x3c6ef372; _h3 = 0xa54ff53a;
     _h4 = 0x510e527f; _h5 = 0x9b05688c; _h6 = 0x1f83d9ab; _h7 = 0x5be0cd19;
 
-    Uint8List lastchunk = Uint8List(64)
+    Uint8List chunkLast = Uint8List(64)
       ..setAll(0, data.sublist(lengthPadded - 64, length))
       ..[length - (lengthPadded - 64)] = 0x80
-      ..buffer.asByteData().setInt64(56, length * 8);
+      ..buffer.asByteData().setInt64(56, lengthToWrite);
 
+    if (hmacIpad != null) {
+      for (int i = 0; i < 16; ++i) {
+        _chunkBuff[i] = hmacIpad.buffer.asByteData().getUint32(i * 4);
+      }
+      _processChunk();
+    }
     for (int n = 0; n < lengthPadded - 64; n += 64) {
       chunk = data.buffer.asByteData(n, 64);
       for (int i = 0; i < 16; ++i) _chunkBuff[i] = chunk.getUint32(i * 4);
       _processChunk();
     }
-    for (int i = 0; i < 16; ++i)
-      _chunkBuff[i] = lastchunk.buffer.asByteData().getUint32(i * 4);
+    for (int i = 0; i < 16; ++i) {
+      _chunkBuff[i] = chunkLast.buffer.asByteData().getUint32(i * 4);
+    }
     _processChunk();
 
     Uint32List hash = Uint32List.fromList([_h0, _h1, _h2, _h3, _h4, _h5, _h6, _h7]);
