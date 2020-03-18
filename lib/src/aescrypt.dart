@@ -586,7 +586,7 @@ class AesCrypt {
 
   /// Computes the HMAC-SHA256.
   Uint8List hmacSha256(Uint8List key, Uint8List data) {
-    if (key.isEmpty) throw ArgumentError('Empty key.');
+    if (key.isEmpty) throw AesCryptArgumentError('Empty key.');
 
     final Int32x4 magic_i = Int32x4(0x36363636, 0x36363636, 0x36363636, 0x36363636);
     final Int32x4 magic_o = Int32x4(0x5C5C5C5C, 0x5C5C5C5C, 0x5C5C5C5C, 0x5C5C5C5C);
@@ -641,7 +641,7 @@ class AesCrypt {
   int a; int b; int c; int d; int e; int f; int g; int h;
   int s0; int s1;
 
-  /// Computes SHA-256.
+  /// Computes SHA256.
   ///
   /// https://en.wikipedia.org/wiki/SHA-2#Pseudocode
   Uint8List sha256(Uint8List data) {
