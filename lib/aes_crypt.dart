@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'package:pointycastle/export.dart';
 
 part 'src/aescrypt.dart';
+part 'src/exceptions.dart';
 part 'src/extentions.dart';
 
 
