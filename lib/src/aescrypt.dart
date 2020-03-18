@@ -37,7 +37,7 @@ class AesCrypt {
     _fnMode = AesCryptFnMode.auto;
     setUserData();
 
-    _aesMode = AesMode.ecb;
+    _aesMode = AesMode.cbc;
     _aesIV = Uint8List(0);
     _aesKey = Uint8List(0);
   }
@@ -559,9 +559,9 @@ class AesCrypt {
   }
 
 
-//*********************************************************************
-//*************************** AES FUNCTIONS ***************************
-//*********************************************************************
+//****************************************************************************
+//**************************** CRYPTO FUNCTIONS ******************************
+//****************************************************************************
 
   Uint8List createIV() {
     return createKey(16);
@@ -580,11 +580,10 @@ class AesCrypt {
       throw AesCryptArgumentError('Invalid data length ${data.length} for AES.');
     }
 
-    var crypt = AesCrypt();
-    crypt.aesSetKeys(key, iv);
-    crypt.aesSetMode(AesMode.cbc);
+    aesSetKeys(key, iv);
+    aesSetMode(AesMode.cbc);
 
-    return crypt.aesEncrypt(data);
+    return aesEncrypt(data);
   }
 
   Uint8List decryptData(Uint8List data, Uint8List iv, Uint8List key) {
@@ -596,11 +595,10 @@ class AesCrypt {
       throw AesCryptArgumentError('Invalid data length ${data.length} for AES.');
     }
 
-    var crypt = AesCrypt();
-    crypt.aesSetKeys(key, iv);
-    crypt.aesSetMode(AesMode.cbc);
+    aesSetKeys(key, iv);
+    aesSetMode(AesMode.cbc);
 
-    return crypt.aesDecrypt(data);
+    return aesDecrypt(data);
   }
 
 
@@ -637,11 +635,6 @@ class AesCrypt {
       }
     }
   }
-
-
-//****************************************************************************
-//**************************** CRYPTO FUNCTIONS ******************************
-//****************************************************************************
 
 
 //****************************************************************************
@@ -1011,11 +1004,11 @@ class AesCrypt {
   /// Set AES encryption key and the initialization vector.
   void aesSetKeys(Uint8List key, [Uint8List iv]) {
     if (![16, 24, 32].contains(key.length)) {
-      throw ArgumentError('Invalid key length for AES. Provided ${key.length * 8} bits, expected 128, 192 or 256 bits.');
+      throw AesCryptArgumentError('Invalid key length for AES. Provided ${key.length * 8} bits, expected 128, 192 or 256 bits.');
     } else if (_aesMode != AesMode.ecb && iv.isNullOrEmpty) {
-      throw ArgumentError('The initialization vector is not specified. It can not be empty when AES mode is not ECB.');
+      throw AesCryptArgumentError('The initialization vector is not specified. It can not be empty when AES mode is not ECB.');
     } else if (iv.length != 16) {
-      throw ArgumentError('Invalid IV length for AES. The initialization vector must be 128 bits long.');
+      throw AesCryptArgumentError('Invalid IV length for AES. The initialization vector must be 128 bits long.');
     }
 
     _aesKey = Uint8List.fromList(key);
@@ -1032,7 +1025,7 @@ class AesCrypt {
   /// Set AES mode.
   void aesSetMode (AesMode mode) {
     if (_aesMode == AesMode.ecb && _aesMode != mode && _aesIV.isNullOrEmpty) {
-      throw ArgumentError('Failed to change AES mode. The initialization vector is not set. When changing the mode from ECB to another one, set IV at first.');
+      throw AesCryptArgumentError('Failed to change AES mode. The initialization vector is not set. When changing the mode from ECB to another one, set IV at first.');
     }
     _aesMode = mode;
   }
@@ -1041,11 +1034,11 @@ class AesCrypt {
   /// Encrypts data
   Uint8List aesEncrypt(Uint8List x) {
     if (_aesKey.isEmpty) {
-      throw ArgumentError('AES encryption key is empty.');
+      throw AesCryptArgumentError('AES encryption key is empty.');
     } else if (_aesMode != AesMode.ecb && _aesIV.isEmpty) {
-      throw ArgumentError('The initialization vector is empty. It can not be empty when AES mode is not ECB.');
+      throw AesCryptArgumentError('The initialization vector is empty. It can not be empty when AES mode is not ECB.');
     } else if (x.length % 16 != 0) {
-      throw ArgumentError('Invalid data length for AES: ${x.length} bytes.');
+      throw AesCryptArgumentError('Invalid data length for AES: ${x.length} bytes.');
     }
 
     Uint8List y = Uint8List(x.length); // returned cipher text;
@@ -1105,11 +1098,11 @@ class AesCrypt {
   /// Decrypts data
   Uint8List aesDecrypt(Uint8List y) {
     if (_aesKey.isEmpty) {
-      throw ArgumentError('AES encryption key is empty.');
+      throw AesCryptArgumentError('AES encryption key is empty.');
     } else if (_aesMode != AesMode.ecb && _aesIV.isEmpty) {
-      throw ArgumentError('The initialization vector is empty. It can not be empty when AES mode is not ECB.');
+      throw AesCryptArgumentError('The initialization vector is empty. It can not be empty when AES mode is not ECB.');
     } else if (y.length % 16 != 0) {
-      throw ArgumentError('Invalid data length for AES: ${y.length} bytes.');
+      throw AesCryptArgumentError('Invalid data length for AES: ${y.length} bytes.');
     }
 
     Uint8List x = Uint8List(y.length); // returned decrypted data;
