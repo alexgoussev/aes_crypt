@@ -1,37 +1,37 @@
 part of aes_crypt;
 
 /// Error thrown when a function is passed an unacceptable argument.
-class AESCryptArgumentError extends ArgumentError {
-  /// Creates a new AESCryptArgumentError with an error message `message`
+class AesCryptArgumentError extends ArgumentError {
+  /// Creates a new AesCryptArgumentError with an error message `message`
   /// describing the erroneous argument.
-  AESCryptArgumentError(String message) : super(message);
+  AesCryptArgumentError(String message) : super(message);
 
-  /// Throws AESCryptArgumentError if `argument` is: null `Object`, empty `String` or empty `Iterable`
+  /// Throws AesCryptArgumentError if `argument` is: null `Object`, empty `String` or empty `Iterable`
   static void checkNotNullOrEmpty(Object argument, String message) {
     if (
     argument == null ||
         ((argument is String)? argument.isEmpty : false) ||
         ((argument is Iterable)? argument.isEmpty : false)
-    ) throw AESCryptArgumentError(message);
+    ) throw AesCryptArgumentError(message);
   }
 }
 
 
 /// Exception thrown when a file operation fails.
-class AESCryptIOException extends FileSystemException {
-  /// Creates a new AESCryptIOException with an error message `message`,
+class AesCryptIOException extends FileSystemException {
+  /// Creates a new AesCryptIOException with an error message `message`,
   /// optional file system path `path` and optional OS error `osError`.
-  const AESCryptIOException(String message, [String path = '', OSError osError]) : super(message, path, osError);
+  const AesCryptIOException(String message, [String path = '', OSError osError]) : super(message, path, osError);
 }
 
 
 /// Exception thrown when an integrity of encrypted data is compromised.
-class AESCryptDataException implements Exception {
+class AesCryptDataException implements Exception {
   /// Message describing the problem.
   final String message;
 
-  /// Creates a new AESCryptDataException with an error message `message`.
-  const AESCryptDataException(this.message);
+  /// Creates a new AesCryptDataException with an error message `message`.
+  const AesCryptDataException(this.message);
 
   /// Returns a string representation of this object.
   @override
@@ -40,15 +40,15 @@ class AESCryptDataException implements Exception {
 
 
 /// Exception thrown when ...
-class AESCryptException implements Exception {
+class AesCryptException implements Exception {
   /// Message describing the problem.
   final String message;
 
   /// Type of an exeption.
-  final AESCryptExceptionType type;
+  final AesCryptExceptionType type;
 
-  /// Creates a new AESCryptException with an error message `message` and type `type`.
-  const AESCryptException(this.message, this.type);
+  /// Creates a new AesCryptException with an error message `message` and type `type`.
+  const AesCryptException(this.message, this.type);
 
   /// Returns a string representation of this object.
   @override

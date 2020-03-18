@@ -1,23 +1,14 @@
 part of aes_crypt;
 
 extension _Uint8ListExtension on Uint8List {
+  bool get isNullOrEmpty => this == null || this.isEmpty;
+
   Uint8List addList(Uint8List other) {
     int totalLength = this.length + other.length;
     Uint8List newList = Uint8List(totalLength);
     newList.setAll(0, this);
     newList.setRange(this.length, totalLength, other);
     return newList;
-  }
-
-  bool isEqual(Uint8List other) {
-    if (identical(this, other)) return true;
-    if (this != null && other == null) return false;
-    int length = this.length;
-    if (length != other.length) return false;
-    for (int i = 0; i < length; i++) {
-      if (this[i] != other[i]) return false;
-    }
-    return true;
   }
 
   bool isNotEqual(Uint8List other) {
