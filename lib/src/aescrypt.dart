@@ -640,7 +640,7 @@ class AesCrypt {
   /// Computes SHA256.
   ///
   /// https://en.wikipedia.org/wiki/SHA-2#Pseudocode
-  Uint8List sha256(Uint8List data, [Uint8List hmacIpad]) => _sha256(data);
+  Uint8List sha256(Uint8List data) => _sha256(data);
 
   Uint8List _sha256(Uint8List data, [Uint8List hmacIpad]) {
     ByteData chunk;
