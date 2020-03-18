@@ -97,7 +97,8 @@ class AesCrypt {
 
     // Encrypt data
 
-    dp[_Data.encdata] = encryptData(source_data_padded, dp[_Data.iv2], dp[_Data.key2]);
+    aesSetParams(dp[_Data.key2], dp[_Data.iv2], AesMode.cbc);
+    dp[_Data.encdata] = aesEncrypt(source_data_padded);
     source_data_padded.fillByZero();
     dp[_Data.hmac2] = hmacSha256(dp[_Data.key2], dp[_Data.encdata]);
     _log('HMAC2', dp[_Data.hmac2]);
@@ -148,7 +149,8 @@ class AesCrypt {
 
     // Encrypt data
 
-    dp[_Data.encdata] = encryptData(source_data_padded, dp[_Data.iv2], dp[_Data.key2]);
+    aesSetParams(dp[_Data.key2], dp[_Data.iv2], AesMode.cbc);
+    dp[_Data.encdata] = aesEncrypt(source_data_padded);
     source_data_padded.fillByZero();
     dp[_Data.hmac2] = hmacSha256(dp[_Data.key2], dp[_Data.encdata]);
     _log('HMAC2', dp[_Data.hmac2]);
@@ -222,7 +224,8 @@ class AesCrypt {
 
     // Encrypt data
 
-    dp[_Data.encdata] = encryptData(source_data_padded, dp[_Data.iv2], dp[_Data.key2]);
+    aesSetParams(dp[_Data.key2], dp[_Data.iv2], AesMode.cbc);
+    dp[_Data.encdata] = aesEncrypt(source_data_padded);
     source_data_padded.fillByZero();
     dp[_Data.hmac2] = hmacSha256(dp[_Data.key2], dp[_Data.encdata]);
     _log('HMAC2', dp[_Data.hmac2]);
@@ -297,7 +300,8 @@ class AesCrypt {
 
     // Encrypt data
 
-    dp[_Data.encdata] = encryptData(source_data_padded, dp[_Data.iv2], dp[_Data.key2]);
+    aesSetParams(dp[_Data.key2], dp[_Data.iv2], AesMode.cbc);
+    dp[_Data.encdata] = aesEncrypt(source_data_padded);
     source_data_padded.fillByZero();
     dp[_Data.hmac2] = hmacSha256(dp[_Data.key2], dp[_Data.encdata]);
     _log('HMAC2', dp[_Data.hmac2]);
@@ -367,7 +371,8 @@ class AesCrypt {
 
     _validateHMAC(keys[_Data.key2], encrypted_data, hmac_2, _HmacType.HMAC2);
 
-    final Uint8List decrypted_data_full = decryptData(encrypted_data, keys[_Data.iv2], keys[_Data.key2]);
+    aesSetParams(keys[_Data.key2], keys[_Data.iv2], AesMode.cbc);
+    final Uint8List decrypted_data_full = aesDecrypt(encrypted_data);
 
     final Uint8List decrypted_data = Uint8List.fromList(decrypted_data_full.sublist(0, decrypted_data_full.length - (16 - file_size_modulo)));
 
@@ -415,7 +420,8 @@ class AesCrypt {
 
     _validateHMAC(keys[_Data.key2], encrypted_data, hmac_2, _HmacType.HMAC2);
 
-    final Uint8List decrypted_data_full = decryptData(encrypted_data, keys[_Data.iv2], keys[_Data.key2]);
+    aesSetParams(keys[_Data.key2], keys[_Data.iv2], AesMode.cbc);
+    final Uint8List decrypted_data_full = aesDecrypt(encrypted_data);
 
     final Uint8List decrypted_data = Uint8List.fromList(decrypted_data_full.sublist(0, decrypted_data_full.length - (16 - file_size_modulo)));
 
@@ -466,7 +472,8 @@ class AesCrypt {
 
     _validateHMAC(keys[_Data.key2], encrypted_data, hmac_2, _HmacType.HMAC2);
 
-    final Uint8List decrypted_data_full = decryptData(encrypted_data, keys[_Data.iv2], keys[_Data.key2]);
+    aesSetParams(keys[_Data.key2], keys[_Data.iv2], AesMode.cbc);
+    final Uint8List decrypted_data_full = aesDecrypt(encrypted_data);
 
     _log('WRITE', 'Started');
     dest_file = _makeDestFilenameFromSource(source_file, dest_file, _Action.decripting);
@@ -532,7 +539,8 @@ class AesCrypt {
 
     _validateHMAC(keys[_Data.key2], encrypted_data, hmac_2, _HmacType.HMAC2);
 
-    final Uint8List decrypted_data_full = decryptData(encrypted_data, keys[_Data.iv2], keys[_Data.key2]);
+    aesSetParams(keys[_Data.key2], keys[_Data.iv2], AesMode.cbc);
+    final Uint8List decrypted_data_full = aesDecrypt(encrypted_data);
 
     _log('WRITE', 'Started');
     dest_file = _makeDestFilenameFromSource(source_file, dest_file, _Action.decripting);
@@ -563,77 +571,12 @@ class AesCrypt {
 //**************************** CRYPTO FUNCTIONS ******************************
 //****************************************************************************
 
-  Uint8List createIV() {
-    return createKey(16);
-  }
-
   Uint8List createKey([int length = 32]) {
     return Uint8List.fromList(List<int>.generate(length, (i) => _secureRandom.nextInt(256)));
   }
 
-  Uint8List encryptData(Uint8List data, Uint8List iv, Uint8List key) {
-    if (![16, 24, 32].contains(key.length)) {
-      throw AesCryptArgumentError('Invalid key length for AES. Provided ${key.length} bytes, expected 16, 24 or 32 bytes.');
-    } else if (iv.length != 16) {
-      throw AesCryptArgumentError('Invalid IV length for AES. Provided ${iv.length} bytes, expected 16 bytes.');
-    } else if (data.length % 16 != 0) {
-      throw AesCryptArgumentError('Invalid data length ${data.length} for AES.');
-    }
-
-    aesSetKeys(key, iv);
-    aesSetMode(AesMode.cbc);
-
-    return aesEncrypt(data);
-  }
-
-  Uint8List decryptData(Uint8List data, Uint8List iv, Uint8List key) {
-    if (![16, 24, 32].contains(key.length)) {
-      throw AesCryptArgumentError('Invalid key length for AES. Provided ${key.length} bytes, expected 32 bytes.');
-    } else if (iv.length != 16) {
-      throw AesCryptArgumentError('Invalid IV length for AES. Provided ${iv.length} bytes, expected 16 bytes.');
-    } else if (data.length % 16 != 0) {
-      throw AesCryptArgumentError('Invalid data length ${data.length} for AES.');
-    }
-
-    aesSetKeys(key, iv);
-    aesSetMode(AesMode.cbc);
-
-    return aesDecrypt(data);
-  }
-
-
-  Uint8List _createKey(Uint8List iv, Uint8List pass) {
-    assert(iv != null);
-    Uint8List key = Uint8List(32);
-    key.setAll(0, iv);
-    int len = 32 + pass.length;
-    Uint8List buff = Uint8List(len);
-    for (int i=0; i < 8192; i++) {
-      buff.setAll(0, key);
-      buff.setRange(32, len, pass);
-      key = sha256(buff);
-    }
-    return key;
-  }
-
-
-  void _validateHMAC(Uint8List key, Uint8List data, Uint8List hash, _HmacType ht) {
-    Uint8List calculated = hmacSha256(key, data);
-    if (hash.isNotEqual(calculated)) {
-      _log('CALCULATED HMAC', calculated);
-      _log('ACTUAL HMAC', hash);
-      switch(ht) {
-        case _HmacType.HMAC1:
-          throw AesCryptDataException('Failed to validate integrity of encryption keys. Wrong `${ht.name}`. Incorrect password or corrupted file.');
-          break;
-        case _HmacType.HMAC2:
-          throw AesCryptDataException('Failed to validate integrity of encrypted data. Wrong `${ht.name}`. The file is corrupted.');
-          break;
-        case _HmacType.HMAC:
-          throw AesCryptDataException('Failed to validate integrity of decrypted data. Wrong `${ht.name}`. Incorrect password or corrupted file.');
-          break;
-      }
-    }
+  Uint8List createIV() {
+    return createKey(16);
   }
 
 
@@ -1023,11 +966,18 @@ class AesCrypt {
 
 
   /// Set AES mode.
-  void aesSetMode (AesMode mode) {
+  void aesSetMode(AesMode mode) {
     if (_aesMode == AesMode.ecb && _aesMode != mode && _aesIV.isNullOrEmpty) {
       throw AesCryptArgumentError('Failed to change AES mode. The initialization vector is not set. When changing the mode from ECB to another one, set IV at first.');
     }
     _aesMode = mode;
+  }
+
+
+  /// Set AES encryption key, the initialization vector and mode.
+  void aesSetParams(Uint8List key, Uint8List iv, AesMode mode) {
+    aesSetKeys(key, iv);
+    aesSetMode(mode);
   }
 
 
@@ -1388,6 +1338,41 @@ class AesCrypt {
 //***************************** PRIVATE HELPERS ******************************
 //****************************************************************************
 
+  Uint8List _keysJoin(Uint8List iv, Uint8List pass) {
+    assert(iv != null);
+    Uint8List key = Uint8List(32);
+    key.setAll(0, iv);
+    int len = 32 + pass.length;
+    Uint8List buff = Uint8List(len);
+    for (int i=0; i < 8192; i++) {
+      buff.setAll(0, key);
+      buff.setRange(32, len, pass);
+      key = sha256(buff);
+    }
+    return key;
+  }
+
+
+  void _validateHMAC(Uint8List key, Uint8List data, Uint8List hash, _HmacType ht) {
+    Uint8List calculated = hmacSha256(key, data);
+    if (hash.isNotEqual(calculated)) {
+      _log('CALCULATED HMAC', calculated);
+      _log('ACTUAL HMAC', hash);
+      switch(ht) {
+        case _HmacType.HMAC1:
+          throw AesCryptDataException('Failed to validate integrity of encryption keys. Wrong `${ht.name}`. Incorrect password or corrupted file.');
+          break;
+        case _HmacType.HMAC2:
+          throw AesCryptDataException('Failed to validate integrity of encrypted data. Wrong `${ht.name}`. The file is corrupted.');
+          break;
+        case _HmacType.HMAC:
+          throw AesCryptDataException('Failed to validate integrity of decrypted data. Wrong `${ht.name}`. Incorrect password or corrupted file.');
+          break;
+      }
+    }
+  }
+
+
   /// Converts the given extension data in to binary data
   Uint8List _getUserDataAsBinary() {
     List<int> output = [];
@@ -1426,7 +1411,7 @@ class AesCrypt {
 
     // Use this IV and password to generate the first encryption key
     // We don't need to use AES for this as its just lots of sha hashing
-    dp[_Data.key1] = _createKey(dp[_Data.iv1], _passBytes);
+    dp[_Data.key1] = _keysJoin(dp[_Data.iv1], _passBytes);
     _log('KEY_1', dp[_Data.key1]);
 
     // Create another set of keys to do the actual file encryption
@@ -1436,7 +1421,8 @@ class AesCrypt {
     _log('KEY_2', dp[_Data.key2]);
 
     // Encrypt the second set of keys using the first keys
-    dp[_Data.enckeys] = encryptData(dp[_Data.iv2].addList(dp[_Data.key2]), dp[_Data.iv1], dp[_Data.key1]);
+    aesSetParams(dp[_Data.key1], dp[_Data.iv1], AesMode.cbc);
+    dp[_Data.enckeys] = aesEncrypt(dp[_Data.iv2].addList(dp[_Data.key2]));
     _log('ENCRYPTED KEYS', dp[_Data.enckeys]);
 
     // Calculate HMAC1 using the first enc key
@@ -1478,7 +1464,7 @@ class AesCrypt {
     final Uint8List iv_1 = _readChunkBytesSync(f, 16, 'IV 1');
     _log('IV_1', iv_1);
 
-    final Uint8List key_1 = _createKey(iv_1, _passBytes);
+    final Uint8List key_1 = _keysJoin(iv_1, _passBytes);
     _log('KEY DERIVED FROM IV_1 & PASSWORD', key_1);
 
     // Encrypted IV and 256-bit AES key used to encrypt the bulk of the file
@@ -1493,7 +1479,8 @@ class AesCrypt {
 
     _validateHMAC(key_1, enc_keys, hmac_1, _HmacType.HMAC1);
 
-    final Uint8List decrypted_keys = decryptData(enc_keys, iv_1, key_1);
+    aesSetParams(key_1, iv_1, AesMode.cbc);
+    final Uint8List decrypted_keys = aesDecrypt(enc_keys);
     _log('DECRYPTED_KEYS', decrypted_keys);
     keys[_Data.iv2] = decrypted_keys.sublist(0, 16);
     _log('IV_2', keys[_Data.iv2]);
@@ -1535,7 +1522,7 @@ class AesCrypt {
     final Uint8List iv_1 = await _readChunkBytes(f, 16, 'IV 1');
     _log('IV_1', iv_1);
 
-    final Uint8List key_1 = _createKey(iv_1, _passBytes);
+    final Uint8List key_1 = _keysJoin(iv_1, _passBytes);
     _log('KEY DERIVED FROM IV_1 & PASSWORD', key_1);
 
     // Encrypted IV and 256-bit AES key used to encrypt the bulk of the file
@@ -1550,7 +1537,8 @@ class AesCrypt {
 
     _validateHMAC(key_1, enc_keys, hmac_1, _HmacType.HMAC1);
 
-    final Uint8List decrypted_keys = decryptData(enc_keys, iv_1, key_1);
+    aesSetParams(key_1, iv_1, AesMode.cbc);
+    final Uint8List decrypted_keys = aesDecrypt(enc_keys);
     _log('DECRYPTED_KEYS', decrypted_keys);
     keys[_Data.iv2] = decrypted_keys.sublist(0, 16);
     _log('IV_2', keys[_Data.iv2]);
