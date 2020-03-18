@@ -20,6 +20,7 @@ applications for other platforms, please visit [AESCrypt's official website](htt
 - File-to-file encryption and decryption
 - Memory-to-file encryption, file-to-memory decryption
 - Password can be in Unicode (like "密碼 パスワード пароль كلمة السر" )
+- Support for asynchronous file system reading/writing
 - Encrypted files have .aes extension which clients on other operating systems recognize
 - Compatible software available for Windows, Linux, Mac OS, Android and iOS 
 (http://www.aescrypt.com/download.html)
@@ -29,8 +30,8 @@ applications for other platforms, please visit [AESCrypt's official website](htt
 
 ## Future plans
 
-- support key files
-- support streams
+- key files
+- asynchronous encoding/decoding
 - decrease memory consumption
 
 ## Bugs
