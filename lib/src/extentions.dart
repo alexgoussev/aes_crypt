@@ -9,6 +9,17 @@ extension _Uint8ListExtension on Uint8List {
     return newList;
   }
 
+  bool isEqual(Uint8List other) {
+    if (identical(this, other)) return true;
+    if (this != null && other == null) return false;
+    int length = this.length;
+    if (length != other.length) return false;
+    for (int i = 0; i < length; i++) {
+      if (this[i] != other[i]) return false;
+    }
+    return true;
+  }
+
   bool isNotEqual(Uint8List other) {
     if (identical(this, other)) return false;
     if (this != null && other == null) return true;
