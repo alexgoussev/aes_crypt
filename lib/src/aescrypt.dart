@@ -585,34 +585,6 @@ class AesCrypt {
 //****************************************************************************
 
   /// Computes the HMAC-SHA256.
-  Uint8List hmacSha256t(Uint8List key, Uint8List data) {
-    if (key.isEmpty) throw AesCryptArgumentError('Empty key.');
-
-    final Int32x4 magic_i = Int32x4(0x36363636, 0x36363636, 0x36363636, 0x36363636);
-    final Int32x4 magic_o = Int32x4(0x5C5C5C5C, 0x5C5C5C5C, 0x5C5C5C5C, 0x5C5C5C5C);
-    final Int32x4List i_pad = Int32x4List(4);
-    final Int32x4List o_pad = Int32x4List(6);
-
-    if (key.length > 64) key = sha256(key);
-    key = Uint8List(64)..setRange(0, key.length, key);
-
-    for (int i = 0; i < 4; i++) {
-      i_pad[i] = key.buffer.asInt32x4List()[i] ^ magic_i;
-    }
-    for (int i = 0; i < 4; i++) {
-      o_pad[i] = key.buffer.asInt32x4List()[i] ^ magic_o;
-    }
-
-    Uint8List buff1 = Uint8List(64 + data.length)
-      ..setAll(0, i_pad.buffer.asUint8List())
-      ..setRange(64, 64 + data.length, data);
-    Uint8List temp = sha256(buff1);
-
-    Uint8List buff2 = o_pad.buffer.asUint8List()..setRange(64, 96, temp);
-    return sha256(buff2);
-  }
-
-
   Uint8List hmacSha256(Uint8List key, Uint8List data) {
     if (key.isEmpty) throw AesCryptArgumentError('Empty key.');
 
@@ -631,7 +603,7 @@ class AesCrypt {
       o_pad[i] = key.buffer.asInt32x4List()[i] ^ magic_o;
     }
 
-    Uint8List temp = sha256(data, i_pad.buffer.asUint8List());
+    Uint8List temp = _sha256(data, i_pad.buffer.asUint8List());
     Uint8List buff2 = o_pad.buffer.asUint8List()..setRange(64, 96, temp);
     return sha256(buff2);
   }
@@ -668,7 +640,9 @@ class AesCrypt {
   /// Computes SHA256.
   ///
   /// https://en.wikipedia.org/wiki/SHA-2#Pseudocode
-  Uint8List sha256(Uint8List data, [Uint8List hmacIpad]) {
+  Uint8List sha256(Uint8List data, [Uint8List hmacIpad]) => _sha256(data);
+
+  Uint8List _sha256(Uint8List data, [Uint8List hmacIpad]) {
     ByteData chunk;
 
     int length = data.length;
