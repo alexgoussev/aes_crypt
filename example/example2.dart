@@ -13,12 +13,12 @@ void main() {
 
   print('Source string: $source_string');
 
-  var aes = AESCrypt();
+  var aes = AesCrypt();
   aes.password = 'пассворд';
 
   try {
     enc_filepath = aes.encryptDataToFileSync(utf8.encode(source_string), enc_filepath);
-  } on AESCryptException catch (e) {
+  } on AesCryptException catch (e) {
     print('Error: $e');
     return;
   }
@@ -26,7 +26,7 @@ void main() {
 
   try {
     decrypted_data = aes.decryptDataFromFileSync(enc_filepath);
-  } on AESCryptException catch (e) {
+  } on AesCryptException catch (e) {
     print('Error: $e');
     return;
   }

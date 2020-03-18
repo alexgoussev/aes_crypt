@@ -9,7 +9,7 @@ void main() {
   print('Unencrypted source file: $dec_filepath');
   print('File content: ' + File(dec_filepath).readAsStringSync() + '\n');
 
-  var aes = AESCrypt();
+  var aes = AesCrypt();
   aes.password = 'пассворд';
 
   // Uncomment line below to set standard extension tags used in the AES file format.
@@ -23,7 +23,7 @@ void main() {
 
   try {
     enc_filepath = aes.encryptFileSync(dec_filepath);
-  } on AESCryptException catch (e) {
+  } on AesCryptException catch (e) {
     print('Error: $e');
     return;
   }
@@ -31,7 +31,7 @@ void main() {
 
   try {
     dec_filepath = aes.decryptFileSync(enc_filepath);
-  } on AESCryptException catch (e) {
+  } on AesCryptException catch (e) {
     print('Error: $e');
     return;
   }
