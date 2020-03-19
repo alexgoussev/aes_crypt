@@ -28,6 +28,7 @@ class AesCrypt {
   Uint8List _passBytes;
   AesCryptFnMode _fnMode;
   Map<String, List<int>> _userdata;
+  final Map<_Data, Uint8List> _dp = {}; // encrypted file data parts
 
 
   AesCrypt([String password = '']) {
@@ -85,23 +86,18 @@ class AesCrypt {
 
     _log('ENCRYPTION', 'Started');
 
-    Map<_Data, Uint8List> dp = _createDataParts();
+    _createDataParts();
 
     // Prepare data for encryption
 
-    dp[_Data.fsmod] = Uint8List.fromList([source_data.length % 16]);
-    _log('FILE SIZE MODULO', dp[_Data.fsmod]);
-
-    final Uint8List source_data_padded = Uint8List(source_data.length + (16 - source_data.length % 16));
-    source_data_padded.setAll(0, source_data);
+    _dp[_Data.fsmod] = Uint8List.fromList([source_data.length % 16]);
+    _log('FILE SIZE MODULO', _dp[_Data.fsmod]);
 
     // Encrypt data
 
-    aesSetParams(dp[_Data.key2], dp[_Data.iv2], AesMode.cbc);
-    dp[_Data.encdata] = aesEncrypt(source_data_padded);
-    source_data_padded.fillByZero();
-    dp[_Data.hmac2] = hmacSha256(dp[_Data.key2], dp[_Data.encdata]);
-    _log('HMAC2', dp[_Data.hmac2]);
+    aesSetParams(_dp[_Data.key2], _dp[_Data.iv2], AesMode.cbc);
+    _encryptAndCalculateHmac(source_data);
+    _log('HMAC2', _dp[_Data.hmac2]);
 
     // Write encrypted data to file
 
@@ -114,15 +110,15 @@ class AesCrypt {
       throw AesCryptIOException('Failed to open file $dest_file for writing.', e.path, e.osError);
     }
     try {
-      _Chunks.forEach((c) { raf.writeFromSync(dp[c]); });
+      _Chunks.forEach((c) { raf.writeFromSync(_dp[c]); });
     } on FileSystemException catch(e) {
       raf.closeSync();
-      dp.values.forEach((v) { v.fillByZero(); });
+      _dp.values.forEach((v) { v.fillByZero(); });
       throw AesCryptIOException('Failed to write encrypted data to file $dest_file.', e.path, e.osError);
     }
     raf.closeSync();
 
-    dp.values.forEach((v) { v.fillByZero(); });
+    _dp.values.forEach((v) { v.fillByZero(); });
     _log('ENCRYPTION', 'Complete');
 
     return dest_file;
@@ -137,23 +133,18 @@ class AesCrypt {
 
     _log('ENCRYPTION', 'Started');
 
-    Map<_Data, Uint8List> dp = _createDataParts();
+    _createDataParts();
 
     // Prepare data for encryption
 
-    dp[_Data.fsmod] = Uint8List.fromList([source_data.length % 16]);
-    _log('FILE SIZE MODULO', dp[_Data.fsmod]);
-
-    final Uint8List source_data_padded = Uint8List(source_data.length + (16 - source_data.length % 16));
-    source_data_padded.setAll(0, source_data);
+    _dp[_Data.fsmod] = Uint8List.fromList([source_data.length % 16]);
+    _log('FILE SIZE MODULO', _dp[_Data.fsmod]);
 
     // Encrypt data
 
-    aesSetParams(dp[_Data.key2], dp[_Data.iv2], AesMode.cbc);
-    dp[_Data.encdata] = aesEncrypt(source_data_padded);
-    source_data_padded.fillByZero();
-    dp[_Data.hmac2] = hmacSha256(dp[_Data.key2], dp[_Data.encdata]);
-    _log('HMAC2', dp[_Data.hmac2]);
+    aesSetParams(_dp[_Data.key2], _dp[_Data.iv2], AesMode.cbc);
+    _encryptAndCalculateHmac(source_data);
+    _log('HMAC2', _dp[_Data.hmac2]);
 
     // Write encrypted data to file
 
@@ -166,15 +157,15 @@ class AesCrypt {
       throw AesCryptIOException('Failed to open file $dest_file for writing.', e.path, e.osError);
     }
     try {
-      await Future.forEach(_Chunks, (c) => raf.writeFrom(dp[c]));
+      await Future.forEach(_Chunks, (c) => raf.writeFrom(_dp[c]));
     } on FileSystemException catch(e) {
       await raf.close();
-      dp.values.forEach((v) { v.fillByZero(); });
+      _dp.values.forEach((v) { v.fillByZero(); });
       throw AesCryptIOException('Failed to write encrypted data to file $dest_file.', e.path, e.osError);
     }
     await raf.close();
 
-    dp.values.forEach((v) { v.fillByZero(); });
+    _dp.values.forEach((v) { v.fillByZero(); });
     _log('ENCRYPTION', 'Complete');
 
     return dest_file;
@@ -198,15 +189,15 @@ class AesCrypt {
 
     _log('ENCRYPTION', 'Started');
 
-    Map<_Data, Uint8List> dp = _createDataParts();
+    _createDataParts();
 
     // Read file data for encryption
 
     int inFileLength = inFile.lengthSync();
-    final Uint8List source_data_padded = Uint8List(inFileLength + (16 - inFileLength % 16));
+    final Uint8List source_data = Uint8List(inFileLength);
 
-    dp[_Data.fsmod] = Uint8List.fromList([inFileLength % 16]);
-    _log('FILE SIZE MODULO', dp[_Data.fsmod]);
+    _dp[_Data.fsmod] = Uint8List.fromList([inFileLength % 16]);
+    _log('FILE SIZE MODULO', _dp[_Data.fsmod]);
 
     RandomAccessFile f;
     try {
@@ -215,7 +206,7 @@ class AesCrypt {
       throw AesCryptIOException('Failed to open file $source_file for reading.', e.path, e.osError);
     }
     try {
-      f.readIntoSync(source_data_padded);
+      f.readIntoSync(source_data);
     } on FileSystemException catch(e) {
       f.closeSync();
       throw AesCryptIOException('Failed to read file $source_file', e.path, e.osError);
@@ -224,11 +215,11 @@ class AesCrypt {
 
     // Encrypt data
 
-    aesSetParams(dp[_Data.key2], dp[_Data.iv2], AesMode.cbc);
-    dp[_Data.encdata] = aesEncrypt(source_data_padded);
-    source_data_padded.fillByZero();
-    dp[_Data.hmac2] = hmacSha256(dp[_Data.key2], dp[_Data.encdata]);
-    _log('HMAC2', dp[_Data.hmac2]);
+    aesSetParams(_dp[_Data.key2], _dp[_Data.iv2], AesMode.cbc);
+    _encryptAndCalculateHmac(source_data);
+    _dp[_Data.hmac2] = hmacSha256(_dp[_Data.key2], _dp[_Data.encdata]);
+
+    _log('HMAC2', _dp[_Data.hmac2]);
 
     // Write encrypted data to file
 
@@ -242,15 +233,15 @@ class AesCrypt {
       throw AesCryptIOException('Failed to open file $dest_file for writing.', e.path, e.osError);
     }
     try {
-      _Chunks.forEach((c) { raf.writeFromSync(dp[c]); });
+      _Chunks.forEach((c) { raf.writeFromSync(_dp[c]); });
     } on FileSystemException catch(e) {
       raf.closeSync();
-      dp.values.forEach((v) { v.fillByZero(); });
+      _dp.values.forEach((v) { v.fillByZero(); });
       throw AesCryptIOException('Failed to write encrypted data to file $dest_file.', e.path, e.osError);
     }
     raf.closeSync();
 
-    dp.values.forEach((v) { v.fillByZero(); });
+    _dp.values.forEach((v) { v.fillByZero(); });
     _log('ENCRYPTION', 'Complete');
 
     return dest_file;
@@ -274,15 +265,15 @@ class AesCrypt {
 
     _log('ENCRYPTION', 'Started');
 
-    Map<_Data, Uint8List> dp = _createDataParts();
+    _createDataParts();
 
     // Read file data for encryption
 
     int inFileLength = inFile.lengthSync();
-    final Uint8List source_data_padded = Uint8List(inFileLength + (16 - inFileLength % 16));
+    final Uint8List source_data = Uint8List(inFileLength);
 
-    dp[_Data.fsmod] = Uint8List.fromList([inFileLength % 16]);
-    _log('FILE SIZE MODULO', dp[_Data.fsmod]);
+    _dp[_Data.fsmod] = Uint8List.fromList([inFileLength % 16]);
+    _log('FILE SIZE MODULO', _dp[_Data.fsmod]);
 
     RandomAccessFile f;
     try {
@@ -291,7 +282,7 @@ class AesCrypt {
       throw AesCryptIOException('Failed to open file $source_file for reading.', e.path, e.osError);
     }
     try {
-      await f.readInto(source_data_padded);
+      await f.readInto(source_data);
     } on FileSystemException catch(e) {
       await f.close();
       throw AesCryptIOException('Failed to read file $source_file', e.path, e.osError);
@@ -300,11 +291,9 @@ class AesCrypt {
 
     // Encrypt data
 
-    aesSetParams(dp[_Data.key2], dp[_Data.iv2], AesMode.cbc);
-    dp[_Data.encdata] = aesEncrypt(source_data_padded);
-    source_data_padded.fillByZero();
-    dp[_Data.hmac2] = hmacSha256(dp[_Data.key2], dp[_Data.encdata]);
-    _log('HMAC2', dp[_Data.hmac2]);
+    aesSetParams(_dp[_Data.key2], _dp[_Data.iv2], AesMode.cbc);
+    _encryptAndCalculateHmac(source_data);
+    _log('HMAC2', _dp[_Data.hmac2]);
 
     // Write encrypted data to file
 
@@ -318,15 +307,15 @@ class AesCrypt {
       throw AesCryptIOException('Failed to open file $dest_file for writing.', e.path, e.osError);
     }
     try {
-      await Future.forEach(_Chunks, (c) => raf.writeFrom(dp[c]));
+      await Future.forEach(_Chunks, (c) => raf.writeFrom(_dp[c]));
     } on FileSystemException catch(e) {
       await raf.closeSync();
-      dp.values.forEach((v) { v.fillByZero(); });
+      _dp.values.forEach((v) { v.fillByZero(); });
       throw AesCryptIOException('Failed to write encrypted data to file $dest_file.', e.path, e.osError);
     }
     await raf.closeSync();
 
-    dp.values.forEach((v) { v.fillByZero(); });
+    _dp.values.forEach((v) { v.fillByZero(); });
     _log('ENCRYPTION', 'Complete');
 
     return dest_file;
@@ -578,6 +567,82 @@ class AesCrypt {
   Uint8List createIV() {
     return createKey(16);
   }
+
+  void _encryptAndCalculateHmac(Uint8List srcData) {
+    final Int32x4 magic_i = Int32x4(0x36363636, 0x36363636, 0x36363636, 0x36363636);
+    final Int32x4 magic_o = Int32x4(0x5C5C5C5C, 0x5C5C5C5C, 0x5C5C5C5C, 0x5C5C5C5C);
+    final Int32x4List i_pad = Int32x4List(4);
+    final Int32x4List o_pad = Int32x4List(6);
+    Uint8List keyForHmac = Uint8List(64)..setAll(0, _aesKey);
+    for (int i = 0; i < 4; i++) {
+      i_pad[i] = keyForHmac.buffer.asInt32x4List()[i] ^ magic_i;
+    }
+    for (int i = 0; i < 4; i++) {
+      o_pad[i] = keyForHmac.buffer.asInt32x4List()[i] ^ magic_o;
+    }
+
+    ByteData chunk;
+    int length = srcData.length; // unencrypted data length
+    int lengthPadded16 = length + ((length % 16 == 0)? 0 : 16 - length % 16); // AES encrypted data length
+    int lengthPadded64 = lengthPadded16 + 8 - ((lengthPadded16 + 8) & 0x3F) + 64; // length for SHA256
+    int lengthToWrite = (lengthPadded16 + 64) * 8;
+    _h0 = 0x6a09e667; _h1 = 0xbb67ae85; _h2 = 0x3c6ef372; _h3 = 0xa54ff53a;
+    _h4 = 0x510e527f; _h5 = 0x9b05688c; _h6 = 0x1f83d9ab; _h7 = 0x5be0cd19;
+
+    Uint8List encData = Uint8List(lengthPadded16);
+    Uint8List t = Uint8List(16);
+    Uint8List block16 = Uint8List.fromList(_aesIV);
+
+    // process first chunk for SHA256 (HMAC ipad, 64 bytes)
+    for (int i = 0; i < 16; ++i) _chunkBuff[i] = i_pad.buffer.asByteData().getUint32(i * 4);
+    _processChunk();
+
+    int n;
+
+    for (n = 0; n < lengthPadded64 - 64; n += 64) {
+      for (int i = n; i < n+64; i += 16) {
+        for (int j = 0; j < 16; ++j) {
+          t[j] = ((i + j) < length ? srcData[i + j] : 0) ^ block16[j]; // zero padding
+        }
+        block16 = _aesEncryptBlock(t);
+        encData.setRange(i, i + 16, block16);
+      }
+      chunk = encData.buffer.asByteData(n, 64);
+      for (int i = 0; i < 16; ++i) _chunkBuff[i] = chunk.getUint32(i * 4);
+      _processChunk();
+    }
+
+    int i = n;
+    if (n < lengthPadded16) {
+      while (i < lengthPadded16) {
+        for (int j = 0; j < 16; ++j) {
+          t[j] = ((i + j) < length ? srcData[i + j] : 0) ^ block16[j]; // zero padding
+        }
+        block16 = _aesEncryptBlock(t);
+        encData.setRange(i, i + 16, block16);
+        i += 16;
+      }
+    }
+    Uint8List lastChunk = Uint8List(64)
+      ..setAll(0, encData.buffer.asUint8List(n));
+    chunk = lastChunk.buffer.asByteData();
+    chunk.setUint8(i - n, 0x80);
+    chunk.setInt64(56, lengthToWrite);
+    for (int i = 0; i < 16; ++i) _chunkBuff[i] = chunk.getUint32(i * 4);
+    _processChunk();
+
+
+    Uint32List hash = Uint32List.fromList([_h0, _h1, _h2, _h3, _h4, _h5, _h6, _h7]);
+    for (int i = 0; i < 8; ++i) {
+      hash[i] = _byteSwap32(hash[i]);
+    }
+    Uint8List buff2 = o_pad.buffer.asUint8List()
+      ..setRange(64, 96, hash.buffer.asUint8List());
+
+    _dp[_Data.hmac2] = sha256(buff2);
+    _dp[_Data.encdata] = encData;
+  }
+
 
 
 //****************************************************************************
@@ -987,64 +1052,91 @@ class AesCrypt {
   }
 
 
-  /// Encrypts data
-  Uint8List aesEncrypt(Uint8List x) {
+  Uint8List aesEncryptCbc(Uint8List data) {
     if (_aesKey.isEmpty) {
       throw AesCryptArgumentError('AES encryption key is empty.');
     } else if (_aesMode != AesMode.ecb && _aesIV.isEmpty) {
       throw AesCryptArgumentError('The initialization vector is empty. It can not be empty when AES mode is not ECB.');
-    } else if (x.length % 16 != 0) {
-      throw AesCryptArgumentError('Invalid data length for AES: ${x.length} bytes.');
+    } else if (data.length % 16 != 0) {
+      throw AesCryptArgumentError('Invalid data length for AES: ${data.length} bytes.');
     }
 
-    Uint8List y = Uint8List(x.length); // returned cipher text;
+    Uint8List y = Uint8List(data.length); // returned cipher text;
     Uint8List t = Uint8List(16); // 16-byte block to hold the temporary input of the cipher
     Uint8List y_block = Uint8List.fromList(_aesIV); // 16-byte block to hold the temporary output of the cipher
+
+    // put a 16-byte block into t, encrypt it and add it to the result
+    for (int i = 0; i < data.length; i += 16) {
+      for (int j = 0; j < 16; ++j) {
+        // XOR this block of plaintext with the initialization vector
+        t[j] = ((i+j) < data.length? data[i+j] : 0) ^ y_block[j];
+      }
+      y_block = _aesEncryptBlock(t);
+      y.setRange(i, i+16, y_block);
+    }
+
+    return y;
+  }
+
+
+  /// Encrypts data
+  Uint8List aesEncrypt(Uint8List data) {
+    if (_aesKey.isEmpty) {
+      throw AesCryptArgumentError('AES encryption key is empty.');
+    } else if (_aesMode != AesMode.ecb && _aesIV.isEmpty) {
+      throw AesCryptArgumentError('The initialization vector is empty. It can not be empty when AES mode is not ECB.');
+    } else if (data.length % 16 != 0) {
+      throw AesCryptArgumentError('Invalid data length for AES: ${data.length} bytes.');
+    }
+
+    Uint8List y = Uint8List(data.length); // returned cipher text;
+    Uint8List t = Uint8List(16); // 16-byte block to hold the temporary input of the cipher
+    Uint8List block16 = Uint8List.fromList(_aesIV); // 16-byte block to hold the temporary output of the cipher
 
     switch (_aesMode) {
       case AesMode.ecb:
       // put a 16-byte block into t, encrypt it and add it to the result
-        for (int i = 0; i < x.length; i += 16) {
+        for (int i = 0; i < data.length; i += 16) {
           for (int j = 0; j < 16; ++j) {
-            if ((i+j) < x.length) t[j] = x[i+j];
+            if ((i+j) < data.length) t[j] = data[i+j];
             else t[j] = 0;
           }
-          y_block = _aesEncryptBlock(t);
-          y.setRange(i, i+16, y_block);
+          block16 = _aesEncryptBlock(t);
+          y.setRange(i, i+16, block16);
         }
         break;
       case AesMode.cbc:
       // put a 16-byte block into t, encrypt it and add it to the result
-        for (int i = 0; i < x.length; i += 16) {
+        for (int i = 0; i < data.length; i += 16) {
           for (int j = 0; j < 16; ++j) {
             // XOR this block of plaintext with the initialization vector
-            t[j] = ((i+j) < x.length? x[i+j] : 0) ^ y_block[j];
+            t[j] = ((i+j) < data.length? data[i+j] : 0) ^ block16[j];
           }
-          y_block = _aesEncryptBlock(t);
-          y.setRange(i, i+16, y_block);
+          block16 = _aesEncryptBlock(t);
+          y.setRange(i, i+16, block16);
         }
         break;
       case AesMode.cfb:
-        for (int i = 0; i < x.length; i += 16) {
+        for (int i = 0; i < data.length; i += 16) {
           // Encrypt the initialization vector/cipher output then XOR with the plaintext
-          y_block = _aesEncryptBlock(y_block);
+          block16 = _aesEncryptBlock(block16);
           for (int j = 0; j < 16; ++j) {
             // XOR the cipher output with the plaintext.
-            y_block[j] = ((i+j) < x.length? x[i+j] : 0) ^ y_block[j];
+            block16[j] = ((i+j) < data.length? data[i+j] : 0) ^ block16[j];
           }
-          y.setRange(i, i+16, y_block);
+          y.setRange(i, i+16, block16);
         }
         break;
       case AesMode.ofb:
-        for (int i = 0; i < x.length; i += 16) {
+        for (int i = 0; i < data.length; i += 16) {
           // Encrypt the initialization vector/cipher output then XOR with the plaintext
-          t = _aesEncryptBlock(y_block);
+          t = _aesEncryptBlock(block16);
           for (int j = 0; j < 16; ++j) {
             // XOR the cipher output with the plaintext.
-            y_block[j] = ((i+j) < x.length? x[i+j] : 0) ^ t[j];
+            block16[j] = ((i+j) < data.length? data[i+j] : 0) ^ t[j];
           }
-          y.setRange(i, i+16, y_block);
-          y_block = Uint8List.fromList(t);
+          y.setRange(i, i+16, block16);
+          block16 = Uint8List.fromList(t);
         }
         break;
     }
@@ -1052,25 +1144,25 @@ class AesCrypt {
   }
 
   /// Decrypts data
-  Uint8List aesDecrypt(Uint8List y) {
+  Uint8List aesDecrypt(Uint8List data) {
     if (_aesKey.isEmpty) {
       throw AesCryptArgumentError('AES encryption key is empty.');
     } else if (_aesMode != AesMode.ecb && _aesIV.isEmpty) {
       throw AesCryptArgumentError('The initialization vector is empty. It can not be empty when AES mode is not ECB.');
-    } else if (y.length % 16 != 0) {
-      throw AesCryptArgumentError('Invalid data length for AES: ${y.length} bytes.');
+    } else if (data.length % 16 != 0) {
+      throw AesCryptArgumentError('Invalid data length for AES: ${data.length} bytes.');
     }
 
-    Uint8List x = Uint8List(y.length); // returned decrypted data;
+    Uint8List x = Uint8List(data.length); // returned decrypted data;
     Uint8List t = Uint8List(16); // 16-byte block
     Uint8List x_block;
-    Uint8List y_block = Uint8List.fromList(_aesIV); // 16-byte block to hold the temporary output of the cipher
+    Uint8List block16 = Uint8List.fromList(_aesIV); // 16-byte block to hold the temporary output of the cipher
 
     switch (_aesMode) {
       case AesMode.ecb:
-        for (int i = 0; i < y.length; i += 16) {
+        for (int i = 0; i < data.length; i += 16) {
           for (int j = 0; j < 16; ++j) {
-            if ((i+j) < y.length) t[j] = y[i+j];
+            if ((i+j) < data.length) t[j] = data[i+j];
             else t[j] = 0;
           }
           x_block = _aesDecryptBlock(t);
@@ -1078,34 +1170,34 @@ class AesCrypt {
         }
         break;
       case AesMode.cbc:
-        for (int i = 0; i < y.length; i += 16) {
+        for (int i = 0; i < data.length; i += 16) {
           for (int j = 0; j < 16; ++j) {
-            if ((i+j) < y.length) { t[j] = y[i+j]; }
+            if ((i+j) < data.length) { t[j] = data[i+j]; }
             else { t[j] = 0; }
           }
           x_block = _aesDecryptBlock(t);
           // XOR the iv/previous cipher block with this decrypted cipher block
           for (int j = 0; j < 16; ++j) {
-            x_block[j] = x_block[j] ^ y_block[j];
+            x_block[j] = x_block[j] ^ block16[j];
           }
-          y_block = Uint8List.fromList(t);
+          block16 = Uint8List.fromList(t);
           x.setRange(i, i+16, x_block);
         }
         break;
       case AesMode.cfb:
-        for (int i = 0; i < y.length; i += 16) {
+        for (int i = 0; i < data.length; i += 16) {
           // Encrypt the initialization vector/cipher output then XOR with the ciphertext
-          x_block = _aesEncryptBlock(y_block);
+          x_block = _aesEncryptBlock(block16);
           for (int j = 0; j < 16; ++j) {
             // XOR the cipher output with the ciphertext.
-            x_block[j] = ((i+j) < y.length? y[i+j] : 0) ^ x_block[j];
-            y_block[j] = y[i+j];
+            x_block[j] = ((i+j) < data.length? data[i+j] : 0) ^ x_block[j];
+            block16[j] = data[i+j];
           }
           x.setRange(i, i+16, x_block);
         }
         break;
       case AesMode.ofb:
-        x = aesEncrypt(y);
+        x = aesEncrypt(data);
         break;
     }
     return x;
@@ -1113,14 +1205,14 @@ class AesCrypt {
 
 
   // Encrypts the 16-byte plain text.
-  Uint8List _aesEncryptBlock(Uint8List x) {
+  Uint8List _aesEncryptBlock(Uint8List data) {
     Uint8List y = Uint8List(16); // 16-byte string
     int i;
 
-    // place input x into the initial state matrix in column order
+    // place input data into the initial state matrix in column order
     for (i = 0; i < 4*_Nb; ++i) {
       // we want integerger division for the second index
-      _s[i % 4][(i - i%_Nb) ~/ _Nb] = x[i];
+      _s[i % 4][(i - i%_Nb) ~/ _Nb] = data[i];
     }
 
     // add round key
@@ -1153,13 +1245,13 @@ class AesCrypt {
 
 
   // Decrypts the 16-byte cipher text.
-  Uint8List _aesDecryptBlock(Uint8List y) {
+  Uint8List _aesDecryptBlock(Uint8List data) {
     Uint8List x = Uint8List(16); // 16-byte string
     int i;
 
-    // place input y into the initial state matrix in column order
+    // place input data into the initial state matrix in column order
     for (i = 0; i < 4*_Nb; ++i) {
-      _s[i % 4][(i - i%_Nb) ~/ _Nb] = y[i];
+      _s[i % 4][(i - i%_Nb) ~/ _Nb] = data[i];
     }
 
     // add round key
@@ -1401,41 +1493,39 @@ class AesCrypt {
   }
 
 
-  Map<_Data, Uint8List> _createDataParts() {
-    Map<_Data,Uint8List> dp = {};
-
+  void _createDataParts() {
     _log('PASSWORD', _passBytes);
 
-    dp[_Data.head] = Uint8List.fromList(<int>[65, 69, 83, 2, 0]);
+    _dp.values.forEach((v) { v.fillByZero(); });
 
-    dp[_Data.userdata] = _getUserDataAsBinary();
+    _dp[_Data.head] = Uint8List.fromList(<int>[65, 69, 83, 2, 0]);
+
+    _dp[_Data.userdata] = _getUserDataAsBinary();
 
     // Create a random IV using the aes implementation
     // IV is based on the block size which is 128 bits (16 bytes) for AES
-    dp[_Data.iv1] = createIV();
-    _log('IV_1', dp[_Data.iv1]);
+    _dp[_Data.iv1] = createIV();
+    _log('IV_1', _dp[_Data.iv1]);
 
     // Use this IV and password to generate the first encryption key
     // We don't need to use AES for this as its just lots of sha hashing
-    dp[_Data.key1] = _keysJoin(dp[_Data.iv1], _passBytes);
-    _log('KEY_1', dp[_Data.key1]);
+    _dp[_Data.key1] = _keysJoin(_dp[_Data.iv1], _passBytes);
+    _log('KEY_1', _dp[_Data.key1]);
 
     // Create another set of keys to do the actual file encryption
-    dp[_Data.iv2] = createIV();
-    _log('IV_2', dp[_Data.iv2]);
-    dp[_Data.key2] = createKey();
-    _log('KEY_2', dp[_Data.key2]);
+    _dp[_Data.iv2] = createIV();
+    _log('IV_2', _dp[_Data.iv2]);
+    _dp[_Data.key2] = createKey();
+    _log('KEY_2', _dp[_Data.key2]);
 
     // Encrypt the second set of keys using the first keys
-    aesSetParams(dp[_Data.key1], dp[_Data.iv1], AesMode.cbc);
-    dp[_Data.enckeys] = aesEncrypt(dp[_Data.iv2].addList(dp[_Data.key2]));
-    _log('ENCRYPTED KEYS', dp[_Data.enckeys]);
+    aesSetParams(_dp[_Data.key1], _dp[_Data.iv1], AesMode.cbc);
+    _dp[_Data.enckeys] = aesEncrypt(_dp[_Data.iv2].addList(_dp[_Data.key2]));
+    _log('ENCRYPTED KEYS', _dp[_Data.enckeys]);
 
     // Calculate HMAC1 using the first enc key
-    dp[_Data.hmac1] = hmacSha256(dp[_Data.key1], dp[_Data.enckeys]);
-    _log('HMAC_1', dp[_Data.hmac1]);
-
-    return dp;
+    _dp[_Data.hmac1] = hmacSha256(_dp[_Data.key1], _dp[_Data.enckeys]);
+    _log('HMAC_1', _dp[_Data.hmac1]);
   }
 
 
