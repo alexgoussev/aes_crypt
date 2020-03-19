@@ -96,7 +96,7 @@ class AesCrypt {
     // Encrypt data
 
     aesSetParams(_dp[_Data.key2], _dp[_Data.iv2], AesMode.cbc);
-    _encryptAndCalculateHmac(source_data);
+    _encryptDataAndCalculateHmac(source_data);
     _log('HMAC2', _dp[_Data.hmac2]);
 
     // Write encrypted data to file
@@ -143,7 +143,7 @@ class AesCrypt {
     // Encrypt data
 
     aesSetParams(_dp[_Data.key2], _dp[_Data.iv2], AesMode.cbc);
-    _encryptAndCalculateHmac(source_data);
+    _encryptDataAndCalculateHmac(source_data);
     _log('HMAC2', _dp[_Data.hmac2]);
 
     // Write encrypted data to file
@@ -216,7 +216,7 @@ class AesCrypt {
     // Encrypt data
 
     aesSetParams(_dp[_Data.key2], _dp[_Data.iv2], AesMode.cbc);
-    _encryptAndCalculateHmac(source_data);
+    _encryptDataAndCalculateHmac(source_data);
     _dp[_Data.hmac2] = hmacSha256(_dp[_Data.key2], _dp[_Data.encdata]);
 
     _log('HMAC2', _dp[_Data.hmac2]);
@@ -292,7 +292,7 @@ class AesCrypt {
     // Encrypt data
 
     aesSetParams(_dp[_Data.key2], _dp[_Data.iv2], AesMode.cbc);
-    _encryptAndCalculateHmac(source_data);
+    _encryptDataAndCalculateHmac(source_data);
     _log('HMAC2', _dp[_Data.hmac2]);
 
     // Write encrypted data to file
@@ -573,7 +573,7 @@ class AesCrypt {
     return createKey(16);
   }
 
-  void _encryptAndCalculateHmac(Uint8List srcData) {
+  void _encryptDataAndCalculateHmac(Uint8List srcData) {
     final Int32x4 magic_i = Int32x4(0x36363636, 0x36363636, 0x36363636, 0x36363636);
     final Int32x4 magic_o = Int32x4(0x5C5C5C5C, 0x5C5C5C5C, 0x5C5C5C5C, 0x5C5C5C5C);
     final Int32x4List i_pad = Int32x4List(4);
@@ -647,7 +647,6 @@ class AesCrypt {
     _dp[_Data.hmac2] = sha256(buff2);
     _dp[_Data.encdata] = encData;
   }
-
 
 
 //****************************************************************************
@@ -1057,38 +1056,10 @@ class AesCrypt {
   }
 
 
-  Uint8List aesEncryptCbc(Uint8List data) {
-    if (_aesKey.isEmpty) {
-      throw AesCryptArgumentError('AES encryption key is empty.');
-    } else if (_aesMode != AesMode.ecb && _aesIV.isEmpty) {
-      throw AesCryptArgumentError('The initialization vector is empty. It can not be empty when AES mode is not ECB.');
-    } else if (data.length % 16 != 0) {
-      throw AesCryptArgumentError('Invalid data length for AES: ${data.length} bytes.');
-    }
-
-    Uint8List y = Uint8List(data.length); // returned cipher text;
-    Uint8List t = Uint8List(16); // 16-byte block to hold the temporary input of the cipher
-    Uint8List y_block = Uint8List.fromList(_aesIV); // 16-byte block to hold the temporary output of the cipher
-
-    // put a 16-byte block into t, encrypt it and add it to the result
-    for (int i = 0; i < data.length; i += 16) {
-      for (int j = 0; j < 16; ++j) {
-        // XOR this block of plaintext with the initialization vector
-        t[j] = ((i+j) < data.length? data[i+j] : 0) ^ y_block[j];
-      }
-      y_block = _aesEncryptBlock(t);
-      y.setRange(i, i+16, y_block);
-    }
-
-    return y;
-  }
-
-
   /// Encrypts data
   Uint8List aesEncrypt(Uint8List data) {
-    if (_aesKey.isEmpty) {
-      throw AesCryptArgumentError('AES encryption key is empty.');
-    } else if (_aesMode != AesMode.ecb && _aesIV.isEmpty) {
+    AesCryptArgumentError.checkNotNullOrEmpty(_aesKey, 'AES encryption key is empty.');
+    if (_aesMode != AesMode.ecb && _aesIV.isEmpty) {
       throw AesCryptArgumentError('The initialization vector is empty. It can not be empty when AES mode is not ECB.');
     } else if (data.length % 16 != 0) {
       throw AesCryptArgumentError('Invalid data length for AES: ${data.length} bytes.');
@@ -1150,9 +1121,8 @@ class AesCrypt {
 
   /// Decrypts data
   Uint8List aesDecrypt(Uint8List data) {
-    if (_aesKey.isEmpty) {
-      throw AesCryptArgumentError('AES encryption key is empty.');
-    } else if (_aesMode != AesMode.ecb && _aesIV.isEmpty) {
+    AesCryptArgumentError.checkNotNullOrEmpty(_aesKey, 'AES encryption key is empty.');
+    if (_aesMode != AesMode.ecb && _aesIV.isEmpty) {
       throw AesCryptArgumentError('The initialization vector is empty. It can not be empty when AES mode is not ECB.');
     } else if (data.length % 16 != 0) {
       throw AesCryptArgumentError('Invalid data length for AES: ${data.length} bytes.');
