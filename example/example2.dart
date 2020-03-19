@@ -1,37 +1,48 @@
-import 'dart:typed_data';
-import 'dart:convert';
-
 import 'package:aes_crypt/aes_crypt.dart';
 
+// Synchronous string encryption/decryption example
+
 void main() {
-  Uint8List decrypted_data;
-  String decrypted_string;
-  String source_string =
-      'Варкалось. Хливкие шорьки пырялись по наве, и хрюкотали зелюки, как мюмзики в мове. '
-      'Twas brillig, and the slithy toves did gyre and gimble in the wabe: All mimsy were the borogoves, and the mome raths outgrabe.';
-  String enc_filepath = './example/testfile2.txt.aes';
+  String decString = '';
+  String encFilepath = '';
 
-  print('Source string: $source_string');
+  // Source string to encrypt
+  String srcString =
+      'Twas brillig, and the slithy toves did gyre and gimble in the wabe: '
+      'All mimsy were the borogoves, and the mome raths outgrabe. '
+      'Варкалось. Хливкие шорьки пырялись по наве, и хрюкотали зелюки, как мюмзики в мове.';
 
-  var aes = AesCrypt();
-  aes.password = 'пассворд';
+  print('Source string: $srcString\n');
+
+  // Creates an instance of AesCrypt class.
+  var crypt = AesCrypt('my cool password');
+
+  // Encrypts source string and save it to a file './example/testfile2.txt.aes'.
+  // Third argument 'utf16' is optional. If it is not specified or set to 'false',
+  // the string will be saved as UTF8 string, otherwise it will be saved as UTF16.
+  // The function returns a path to encrypted file.
+  // ...
+  encFilepath = crypt.encryptStringToFileSync(srcString, './example/testfile2.txt.aes', utf16: true);
+
+  print('Encrypted file: $encFilepath\n');
 
   try {
-    enc_filepath = aes.encryptDataToFileSync(utf8.encode(source_string), enc_filepath);
-  } on AesCryptException catch (e) {
+    // Let's try to set wrong password and see what will happens.
+    crypt.setPassword('my wrong password');
+    // Decrypts the file and returns source string.
+    decString = crypt.decryptStringFromFileSync(encFilepath, utf16: true);
+    print('Decrypted string: $decString');
+  } on AesCryptDataException catch (e) {
+    // It goes here in the case of wrong password or corrupted file.
+    print('The decryption has been completed unsuccessfully.');
     print('Error: $e');
-    return;
+  } on AesCryptIOException catch (e) {
+    // It goes here in the case of some file system operation error
+    // (file opening, reading or writing).
+    print('The decryption has been completed unsuccessfully.');
+    print('Error: $e');
   }
-  print('Encrypted file: $enc_filepath');
 
-  try {
-    decrypted_data = aes.decryptDataFromFileSync(enc_filepath);
-  } on AesCryptException catch (e) {
-    print('Error: $e');
-    return;
-  }
-  decrypted_string = utf8.decode(decrypted_data);
-  print('Decrypted string: $decrypted_string');
 
   print('\nDone.');
 }

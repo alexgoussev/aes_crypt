@@ -9,10 +9,11 @@ void main() {
   var random = Random();
 
   AesCrypt aes = AesCrypt();
-  aes.password = 'passw 密碼 パスワード пароль كلمة السر';
+  aes.setPassword('passw 密碼 パスワード пароль كلمة السر');
 
 
   group('A group of tests', () {
+
     test('Test `encryptFileSync()` and `decryptFileSync()` functions', () {
       String src_filepath = './test/testfile.txt';
       String source_data1 = File(src_filepath).readAsStringSync();
