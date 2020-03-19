@@ -363,10 +363,9 @@ class AesCrypt {
     aesSetParams(keys[_Data.key2], keys[_Data.iv2], AesMode.cbc);
     final Uint8List decrypted_data_full = aesDecrypt(encrypted_data);
 
-    final Uint8List decrypted_data = Uint8List.fromList(decrypted_data_full.sublist(0,
-        decrypted_data_full.length - (file_size_modulo == 0? 0: 16 - file_size_modulo)));
+    final Uint8List decrypted_data = decrypted_data_full.buffer.asUint8List(0,
+        decrypted_data_full.length - (file_size_modulo == 0? 0: 16 - file_size_modulo));
 
-    decrypted_data_full.fillByZero();
     _log('DECRYPTION', 'Completed');
     return decrypted_data;
   }
@@ -413,10 +412,9 @@ class AesCrypt {
     aesSetParams(keys[_Data.key2], keys[_Data.iv2], AesMode.cbc);
     final Uint8List decrypted_data_full = aesDecrypt(encrypted_data);
 
-    final Uint8List decrypted_data = Uint8List.fromList(decrypted_data_full.sublist(0,
-        decrypted_data_full.length - (file_size_modulo == 0? 0: 16 - file_size_modulo)));
+    final Uint8List decrypted_data = decrypted_data_full.buffer.asUint8List(0,
+        decrypted_data_full.length - (file_size_modulo == 0? 0: 16 - file_size_modulo));
 
-    decrypted_data_full.fillByZero();
     _log('DECRYPTION', 'Completed');
 
     return decrypted_data;
