@@ -1707,7 +1707,7 @@ class AesCrypt {
         }
         break;
       case AesCryptFnMode.overwrite:
-        if (FileSystemEntity.typeSync(destFilePath) != FileSystemEntityType.file) {
+        if (_isPathExistsSync(destFilePath) && FileSystemEntity.typeSync(destFilePath) != FileSystemEntityType.file) {
           throw AesCryptArgumentError('Destination path $destFilePath is not a file and can not be overwriten.');
         }
         //File(destFilePath).deleteSync();
@@ -1734,7 +1734,7 @@ class AesCrypt {
         }
         break;
       case AesCryptFnMode.overwrite:
-        if ((await FileSystemEntity.type(destFilePath)) != FileSystemEntityType.file) {
+        if ((await _isPathExists(destFilePath)) && (await FileSystemEntity.type(destFilePath)) != FileSystemEntityType.file) {
           throw AesCryptArgumentError('Destination path $destFilePath is not a file and can not be overwriten.');
         }
         //await File(destFilePath).delete();
