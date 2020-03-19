@@ -1,21 +1,13 @@
 part of aes_crypt;
 
 enum AesCryptFnMode { auto, warn, overwrite }
-
 enum AesCryptExceptionType { destFileExists }
-
 enum AesMode { ecb, cbc, cfb, ofb }
 
-
 enum _Action { encrypting, decripting }
-
-enum _HmacType { HMAC, HMAC1, HMAC2 }
-extension _HmacTypeExtension on _HmacType {
-  String get name => this.toString().replaceFirst(this.runtimeType.toString() + '.', '');
-}
-
 enum _Data { head, userdata, iv1, key1, iv2, key2, enckeys, hmac1, encdata, fsmod, hmac2 }
-
+enum _HmacType { HMAC, HMAC1, HMAC2 }
+extension _HmacTypeExtension on _HmacType { String get name => this.toString().replaceFirst(this.runtimeType.toString() + '.', ''); }
 
 class AesCrypt {
   static const bool _debug = false;
@@ -29,7 +21,6 @@ class AesCrypt {
   AesCryptFnMode _fnMode;
   Map<String, List<int>> _userdata;
   final Map<_Data, Uint8List> _dp = {}; // encrypted file data parts
-
 
   AesCrypt([String password = '']) {
     _password = password;
@@ -1809,3 +1800,4 @@ class AesCrypt {
   }
 
 }
+
