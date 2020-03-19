@@ -704,16 +704,30 @@ class AesCrypt {
     ByteData chunk;
 
     int length = data.length;
-    int lengthPadded = length + 64 - ((length + 8) & 0x3F) + 8;
+    int lengthPadded = length + 8 - ((length + 8) & 0x3F) + 64;
     int lengthToWrite = (hmacIpad == null? length : length + 64) * 8;
 
     _h0 = 0x6a09e667; _h1 = 0xbb67ae85; _h2 = 0x3c6ef372; _h3 = 0xa54ff53a;
     _h4 = 0x510e527f; _h5 = 0x9b05688c; _h6 = 0x1f83d9ab; _h7 = 0x5be0cd19;
 
-    Uint8List chunkLast = Uint8List(64)
-      ..setAll(0, data.sublist(lengthPadded - 64, length))
-      ..[length - (lengthPadded - 64)] = 0x80
-      ..buffer.asByteData().setInt64(56, lengthToWrite);
+    Uint8List chunkLast;
+    Uint8List chunkLastPre;
+    int chanksToProcess;
+
+    if (length < lengthPadded - 64) {
+      chanksToProcess = lengthPadded - 128;
+      chunkLastPre = Uint8List(64)
+        ..setAll(0, data.buffer.asUint8List(length - (length & 0x3F), length & 0x3F))
+        ..[length & 0x3F] = 0x80;
+      chunkLast = Uint8List(64)
+        ..buffer.asByteData().setInt64(56, lengthToWrite);
+    } else {
+      chanksToProcess = lengthPadded - 64;
+      chunkLast = Uint8List(64)
+        ..setAll(0, data.buffer.asUint8List(lengthPadded - 64, length - (lengthPadded - 64)))
+        ..[length - (lengthPadded - 64)] = 0x80
+        ..buffer.asByteData().setInt64(56, lengthToWrite);
+    }
 
     if (hmacIpad != null) {
       for (int i = 0; i < 16; ++i) {
@@ -721,14 +735,26 @@ class AesCrypt {
       }
       _processChunk();
     }
-    for (int n = 0; n < lengthPadded - 64; n += 64) {
+
+    for (int n = 0; n < chanksToProcess; n += 64) {
       chunk = data.buffer.asByteData(n, 64);
       for (int i = 0; i < 16; ++i) _chunkBuff[i] = chunk.getUint32(i * 4);
+
       _processChunk();
     }
+
+    if (length < lengthPadded - 64) {
+      for (int i = 0; i < 16; ++i) {
+        _chunkBuff[i] = chunkLastPre.buffer.asByteData().getUint32(i * 4);
+      }
+
+      _processChunk();
+    }
+
     for (int i = 0; i < 16; ++i) {
       _chunkBuff[i] = chunkLast.buffer.asByteData().getUint32(i * 4);
     }
+
     _processChunk();
 
     Uint32List hash = Uint32List.fromList([_h0, _h1, _h2, _h3, _h4, _h5, _h6, _h7]);
