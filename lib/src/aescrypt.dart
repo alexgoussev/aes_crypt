@@ -40,28 +40,37 @@ class AesCrypt {
     _passBytes = password.toUTF16BytesLE();
   }
 
+  /// Set mode for file naming
   void setFilenamingMode(AesCryptFnMode mode) => _fnMode = mode;
 
-  void setUserData({String created_by = 'Dart aes_crypt package', String created_date = '', String created_time =''}) {
+  /// Set standard extension tags used in the AES file format.
+  ///
+  /// [createdBy] is a developer-defined text string that identifies the software
+  ///   product, manufacturer, or other useful information (such as software version).
+  /// [createdOn] indicates the date that the file was created.
+  ///   The format of the date string is YYYY-MM-DD.
+  /// [createdAt] indicates the time that the file was created. The format of the date string
+  ///   is in 24-hour format like HH:MM:SS (e.g, 21:15:04). The time zone is UTC.
+  void setUserData({String createdBy = 'Dart aes_crypt library', String createdOn = '', String createdAt =''}) {
     String key;
     _userdata = {};
-    if (created_by.isNotEmpty) {
+    if (createdBy.isNotEmpty) {
       key = 'CREATED_BY';
-      _userdata[key] = created_by.toUTF8Bytes();
+      _userdata[key] = createdBy.toUTF8Bytes();
       if (key.length + _userdata[key].length + 1 > 255) {
         throw AesCryptArgumentError('User data `$key` is too long. Total length should not exceed 255 bytes.');
       }
     }
-    if (created_date.isNotEmpty) {
+    if (createdOn.isNotEmpty) {
       key = 'CREATED_DATE';
-      _userdata[key] = created_date.toUTF8Bytes();
+      _userdata[key] = createdOn.toUTF8Bytes();
       if (key.length + _userdata[key].length + 1 > 255) {
         throw AesCryptArgumentError('User data `$key` is too long. Total length should not exceed 255 bytes.');
       }
     }
-    if (created_time.isNotEmpty) {
+    if (createdAt.isNotEmpty) {
       key = 'CREATED_TIME';
-      _userdata[key] = created_time.toUTF8Bytes();
+      _userdata[key] = createdAt.toUTF8Bytes();
       if (key.length + _userdata[key].length + 1 > 255) {
         throw AesCryptArgumentError('User data `$key` is too long. Total length should not exceed 255 bytes.');
       }
@@ -69,11 +78,11 @@ class AesCrypt {
   }
 
 
-  String encryptDataToFileSync(List<int> source_data, String dest_file) {
-    dest_file = dest_file.trim();
+  String encryptDataToFileSync(List<int> srcData, String destFilePath) {
+    destFilePath = destFilePath.trim();
 
     AesCryptArgumentError.checkNotNullOrEmpty(_password, 'Empty password.');
-    AesCryptArgumentError.checkNotNullOrEmpty(dest_file, 'Empty encrypted file path.');
+    AesCryptArgumentError.checkNotNullOrEmpty(destFilePath, 'Empty encrypted file path.');
 
     _log('ENCRYPTION', 'Started');
 
@@ -81,38 +90,38 @@ class AesCrypt {
 
     // Prepare data for encryption
 
-    _dp[_Data.fsmod] = Uint8List.fromList([source_data.length % 16]);
+    _dp[_Data.fsmod] = Uint8List.fromList([srcData.length % 16]);
     _log('FILE SIZE MODULO', _dp[_Data.fsmod]);
 
     // Encrypt data
 
     aesSetParams(_dp[_Data.key2], _dp[_Data.iv2], AesMode.cbc);
-    _encryptDataAndCalculateHmac(source_data);
+    _encryptDataAndCalculateHmac(srcData);
     _log('HMAC2', _dp[_Data.hmac2]);
 
     // Write encrypted data to file
 
-    dest_file = _modifyDestinationFilenameSync(dest_file);
-    File outFile = File(dest_file);
+    destFilePath = _modifyDestinationFilenameSync(destFilePath);
+    File outFile = File(destFilePath);
     RandomAccessFile raf;
     try {
       raf = outFile.openSync(mode: FileMode.writeOnly);
     } on FileSystemException catch(e) {
-      throw AesCryptIOException('Failed to open file $dest_file for writing.', e.path, e.osError);
+      throw AesCryptIOException('Failed to open file $destFilePath for writing.', e.path, e.osError);
     }
     try {
       _Chunks.forEach((c) { raf.writeFromSync(_dp[c]); });
     } on FileSystemException catch(e) {
       raf.closeSync();
       _dp.values.forEach((v) { v.fillByZero(); });
-      throw AesCryptIOException('Failed to write encrypted data to file $dest_file.', e.path, e.osError);
+      throw AesCryptIOException('Failed to write encrypted data to file $destFilePath.', e.path, e.osError);
     }
     raf.closeSync();
 
     _dp.values.forEach((v) { v.fillByZero(); });
     _log('ENCRYPTION', 'Complete');
 
-    return dest_file;
+    return destFilePath;
   }
 
 
@@ -120,7 +129,7 @@ class AesCrypt {
     dest_file = dest_file.trim();
 
     AesCryptArgumentError.checkNotNullOrEmpty(_password, 'Empty password.');
-    AesCryptArgumentError.checkNotNullOrEmpty(dest_file, 'Empty encrypted file path.');
+    AesCryptArgumentError.checkNotNullOrEmpty(destFilePath, 'Empty encrypted file path.');
 
     _log('ENCRYPTION', 'Started');
 
@@ -128,38 +137,38 @@ class AesCrypt {
 
     // Prepare data for encryption
 
-    _dp[_Data.fsmod] = Uint8List.fromList([source_data.length % 16]);
+    _dp[_Data.fsmod] = Uint8List.fromList([srcData.length % 16]);
     _log('FILE SIZE MODULO', _dp[_Data.fsmod]);
 
     // Encrypt data
 
     aesSetParams(_dp[_Data.key2], _dp[_Data.iv2], AesMode.cbc);
-    _encryptDataAndCalculateHmac(source_data);
+    _encryptDataAndCalculateHmac(srcData);
     _log('HMAC2', _dp[_Data.hmac2]);
 
     // Write encrypted data to file
 
-    dest_file = await _modifyDestinationFilename(dest_file);
-    File outFile = File(dest_file);
+    destFilePath = await _modifyDestinationFilename(destFilePath);
+    File outFile = File(destFilePath);
     RandomAccessFile raf;
     try {
       raf = await outFile.open(mode: FileMode.writeOnly);
     } on FileSystemException catch(e) {
-      throw AesCryptIOException('Failed to open file $dest_file for writing.', e.path, e.osError);
+      throw AesCryptIOException('Failed to open file $destFilePath for writing.', e.path, e.osError);
     }
     try {
       await Future.forEach(_Chunks, (c) => raf.writeFrom(_dp[c]));
     } on FileSystemException catch(e) {
       await raf.close();
       _dp.values.forEach((v) { v.fillByZero(); });
-      throw AesCryptIOException('Failed to write encrypted data to file $dest_file.', e.path, e.osError);
+      throw AesCryptIOException('Failed to write encrypted data to file $destFilePath.', e.path, e.osError);
     }
     await raf.close();
 
     _dp.values.forEach((v) { v.fillByZero(); });
     _log('ENCRYPTION', 'Complete');
 
-    return dest_file;
+    return destFilePath;
   }
 
 
@@ -168,14 +177,14 @@ class AesCrypt {
     dest_file = dest_file.trim();
 
     AesCryptArgumentError.checkNotNullOrEmpty(_password, 'Empty password.');
-    AesCryptArgumentError.checkNotNullOrEmpty(source_file, 'Empty source file path.');
-    if (source_file == dest_file) throw AesCryptArgumentError('Source file path and encrypted file path are the same.');
+    AesCryptArgumentError.checkNotNullOrEmpty(srcFilePath, 'Empty source file path.');
+    if (srcFilePath == destFilePath) throw AesCryptArgumentError('Source file path and encrypted file path are the same.');
 
-    File inFile = File(source_file);
+    File inFile = File(srcFilePath);
     if (!inFile.existsSync()) {
-      throw AesCryptIOException('Source file $source_file does not exist.', source_file);
+      throw AesCryptIOException('Source file $srcFilePath does not exist.', srcFilePath);
     } else if (!inFile.isReadable()) {
-      throw AesCryptIOException('Source file $source_file is not readable.', source_file);
+      throw AesCryptIOException('Source file $srcFilePath is not readable.', srcFilePath);
     }
 
     _log('ENCRYPTION', 'Started');
@@ -185,7 +194,7 @@ class AesCrypt {
     // Read file data for encryption
 
     int inFileLength = inFile.lengthSync();
-    final Uint8List source_data = Uint8List(inFileLength);
+    final Uint8List srcData = Uint8List(inFileLength);
 
     _dp[_Data.fsmod] = Uint8List.fromList([inFileLength % 16]);
     _log('FILE SIZE MODULO', _dp[_Data.fsmod]);
@@ -194,64 +203,64 @@ class AesCrypt {
     try {
       f = inFile.openSync(mode: FileMode.read);
     } on FileSystemException catch(e) {
-      throw AesCryptIOException('Failed to open file $source_file for reading.', e.path, e.osError);
+      throw AesCryptIOException('Failed to open file $srcFilePath for reading.', e.path, e.osError);
     }
     try {
-      f.readIntoSync(source_data);
+      f.readIntoSync(srcData);
     } on FileSystemException catch(e) {
       f.closeSync();
-      throw AesCryptIOException('Failed to read file $source_file', e.path, e.osError);
+      throw AesCryptIOException('Failed to read file $srcFilePath', e.path, e.osError);
     }
     f.closeSync();
 
     // Encrypt data
 
     aesSetParams(_dp[_Data.key2], _dp[_Data.iv2], AesMode.cbc);
-    _encryptDataAndCalculateHmac(source_data);
+    _encryptDataAndCalculateHmac(srcData);
     _dp[_Data.hmac2] = hmacSha256(_dp[_Data.key2], _dp[_Data.encdata]);
 
     _log('HMAC2', _dp[_Data.hmac2]);
 
     // Write encrypted data to file
 
-    dest_file = _makeDestFilenameFromSource(source_file, dest_file, _Action.encrypting);
-    dest_file = _modifyDestinationFilenameSync(dest_file);
-    File outFile = File(dest_file);
+    destFilePath = _makeDestFilenameFromSource(srcFilePath, destFilePath, _Action.encrypting);
+    destFilePath = _modifyDestinationFilenameSync(destFilePath);
+    File outFile = File(destFilePath);
     RandomAccessFile raf;
     try {
       raf = outFile.openSync(mode: FileMode.writeOnly);
     } on FileSystemException catch(e) {
-      throw AesCryptIOException('Failed to open file $dest_file for writing.', e.path, e.osError);
+      throw AesCryptIOException('Failed to open file $destFilePath for writing.', e.path, e.osError);
     }
     try {
       _Chunks.forEach((c) { raf.writeFromSync(_dp[c]); });
     } on FileSystemException catch(e) {
       raf.closeSync();
       _dp.values.forEach((v) { v.fillByZero(); });
-      throw AesCryptIOException('Failed to write encrypted data to file $dest_file.', e.path, e.osError);
+      throw AesCryptIOException('Failed to write encrypted data to file $destFilePath.', e.path, e.osError);
     }
     raf.closeSync();
 
     _dp.values.forEach((v) { v.fillByZero(); });
     _log('ENCRYPTION', 'Complete');
 
-    return dest_file;
+    return destFilePath;
   }
 
 
-  Future<String> encryptFile(String source_file, [String dest_file = '']) async {
-    source_file = source_file.trim();
-    dest_file = dest_file.trim();
+  Future<String> encryptFile(String srcFilePath, [String destFilePath = '']) async {
+    srcFilePath = srcFilePath.trim();
+    destFilePath = destFilePath.trim();
 
     AesCryptArgumentError.checkNotNullOrEmpty(_password, 'Empty password.');
-    AesCryptArgumentError.checkNotNullOrEmpty(source_file, 'Empty source file path.');
-    if (source_file == dest_file) throw AesCryptArgumentError('Source file path and encrypted file path are the same.');
+    AesCryptArgumentError.checkNotNullOrEmpty(srcFilePath, 'Empty source file path.');
+    if (srcFilePath == destFilePath) throw AesCryptArgumentError('Source file path and encrypted file path are the same.');
 
-    File inFile = File(source_file);
+    File inFile = File(srcFilePath);
     if (! await inFile.exists()) {
-      throw AesCryptIOException('Source file $source_file does not exist.', source_file);
+      throw AesCryptIOException('Source file $srcFilePath does not exist.', srcFilePath);
     } else if (!inFile.isReadable()) {
-      throw AesCryptIOException('Source file $source_file is not readable.', source_file);
+      throw AesCryptIOException('Source file $srcFilePath is not readable.', srcFilePath);
     }
 
     _log('ENCRYPTION', 'Started');
@@ -261,7 +270,7 @@ class AesCrypt {
     // Read file data for encryption
 
     int inFileLength = inFile.lengthSync();
-    final Uint8List source_data = Uint8List(inFileLength);
+    final Uint8List srcData = Uint8List(inFileLength);
 
     _dp[_Data.fsmod] = Uint8List.fromList([inFileLength % 16]);
     _log('FILE SIZE MODULO', _dp[_Data.fsmod]);
@@ -270,68 +279,68 @@ class AesCrypt {
     try {
       f = await inFile.open(mode: FileMode.read);
     } on FileSystemException catch(e) {
-      throw AesCryptIOException('Failed to open file $source_file for reading.', e.path, e.osError);
+      throw AesCryptIOException('Failed to open file $srcFilePath for reading.', e.path, e.osError);
     }
     try {
-      await f.readInto(source_data);
+      await f.readInto(srcData);
     } on FileSystemException catch(e) {
       await f.close();
-      throw AesCryptIOException('Failed to read file $source_file', e.path, e.osError);
+      throw AesCryptIOException('Failed to read file $srcFilePath', e.path, e.osError);
     }
     await f.close();
 
     // Encrypt data
 
     aesSetParams(_dp[_Data.key2], _dp[_Data.iv2], AesMode.cbc);
-    _encryptDataAndCalculateHmac(source_data);
+    _encryptDataAndCalculateHmac(srcData);
     _log('HMAC2', _dp[_Data.hmac2]);
 
     // Write encrypted data to file
 
-    dest_file = _makeDestFilenameFromSource(source_file, dest_file, _Action.encrypting);
-    dest_file = await _modifyDestinationFilename(dest_file);
-    File outFile = File(dest_file);
+    destFilePath = _makeDestFilenameFromSource(srcFilePath, destFilePath, _Action.encrypting);
+    destFilePath = await _modifyDestinationFilename(destFilePath);
+    File outFile = File(destFilePath);
     RandomAccessFile raf;
     try {
       raf = await outFile.open(mode: FileMode.writeOnly);
     } on FileSystemException catch(e) {
-      throw AesCryptIOException('Failed to open file $dest_file for writing.', e.path, e.osError);
+      throw AesCryptIOException('Failed to open file $destFilePath for writing.', e.path, e.osError);
     }
     try {
       await Future.forEach(_Chunks, (c) => raf.writeFrom(_dp[c]));
     } on FileSystemException catch(e) {
       await raf.closeSync();
       _dp.values.forEach((v) { v.fillByZero(); });
-      throw AesCryptIOException('Failed to write encrypted data to file $dest_file.', e.path, e.osError);
+      throw AesCryptIOException('Failed to write encrypted data to file $destFilePath.', e.path, e.osError);
     }
     await raf.closeSync();
 
     _dp.values.forEach((v) { v.fillByZero(); });
     _log('ENCRYPTION', 'Complete');
 
-    return dest_file;
+    return destFilePath;
   }
 
 
-  Uint8List decryptDataFromFileSync(String source_file) {
-    source_file = source_file.trim();
+  Uint8List decryptDataFromFileSync(String srcFilePath) {
+    srcFilePath = srcFilePath.trim();
 
     AesCryptArgumentError.checkNotNullOrEmpty(_password, 'Empty password.');
-    AesCryptArgumentError.checkNotNullOrEmpty(source_file, 'Empty source file path.');
+    AesCryptArgumentError.checkNotNullOrEmpty(srcFilePath, 'Empty source file path.');
 
     _log('DECRYPTION', 'Started');
     _log('PASSWORD', _passBytes);
 
-    File inFile = File(source_file);
+    File inFile = File(srcFilePath);
     if (!inFile.existsSync()) {
-      throw AesCryptIOException('Source file $source_file does not exist.');
+      throw AesCryptIOException('Source file $srcFilePath does not exist.');
     }
 
     RandomAccessFile f;
     try {
       f = inFile.openSync(mode: FileMode.read);
     } on FileSystemException catch(e) {
-      throw AesCryptIOException('Failed to open file $source_file for reading.', e.path, e.osError);
+      throw AesCryptIOException('Failed to open file $srcFilePath for reading.', e.path, e.osError);
     }
 
     Map<_Data,Uint8List> keys = _readKeysSync(f);
@@ -366,21 +375,21 @@ class AesCrypt {
     source_file = source_file.trim();
 
     AesCryptArgumentError.checkNotNullOrEmpty(_password, 'Empty password.');
-    AesCryptArgumentError.checkNotNullOrEmpty(source_file, 'Empty source file path.');
+    AesCryptArgumentError.checkNotNullOrEmpty(srcFilePath, 'Empty source file path.');
 
     _log('DECRYPTION', 'Started');
     _log('PASSWORD', _passBytes);
 
-    File inFile = File(source_file);
+    File inFile = File(srcFilePath);
     if (! await inFile.exists()) {
-      throw AesCryptIOException('Source file $source_file does not exist.');
+      throw AesCryptIOException('Source file $srcFilePath does not exist.');
     }
 
     RandomAccessFile f;
     try {
       f = await inFile.open(mode: FileMode.read);
     } on FileSystemException catch(e) {
-      throw AesCryptIOException('Failed to open file $source_file for reading.', e.path, e.osError);
+      throw AesCryptIOException('Failed to open file $srcFilePath for reading.', e.path, e.osError);
     }
 
     Map<_Data,Uint8List> keys = await _readKeys(f);
@@ -417,22 +426,22 @@ class AesCrypt {
     dest_file = dest_file.trim();
 
     AesCryptArgumentError.checkNotNullOrEmpty(_password, 'Empty password.');
-    AesCryptArgumentError.checkNotNullOrEmpty(source_file, 'Empty source file path.');
-    if (source_file == dest_file) throw AesCryptArgumentError('Source file path and decrypted file path are the same.');
+    AesCryptArgumentError.checkNotNullOrEmpty(srcFilePath, 'Empty source file path.');
+    if (srcFilePath == destFilePath) throw AesCryptArgumentError('Source file path and decrypted file path are the same.');
 
     _log('DECRYPTION', 'Started');
     _log('PASSWORD', _passBytes);
 
-    File inFile = File(source_file);
+    File inFile = File(srcFilePath);
     if (!inFile.existsSync()) {
-      throw FileSystemException('Source file $source_file does not exist.');
+      throw FileSystemException('Source file $srcFilePath does not exist.');
     }
 
     RandomAccessFile f;
     try {
       f = inFile.openSync(mode: FileMode.read);
     } on FileSystemException catch(e) {
-      throw FileSystemException('Failed to open file $source_file for reading.', e.path, e.osError);
+      throw FileSystemException('Failed to open file $srcFilePath for reading.', e.path, e.osError);
     }
 
     Map<_Data,Uint8List> keys = _readKeysSync(f);
@@ -456,14 +465,14 @@ class AesCrypt {
     final Uint8List decrypted_data_full = aesDecrypt(encrypted_data);
 
     _log('WRITE', 'Started');
-    dest_file = _makeDestFilenameFromSource(source_file, dest_file, _Action.decripting);
-    dest_file = _modifyDestinationFilenameSync(dest_file);
-    File outFile = File(dest_file);
+    destFilePath = _makeDestFilenameFromSource(srcFilePath, destFilePath, _Action.decripting);
+    destFilePath = _modifyDestinationFilenameSync(destFilePath);
+    File outFile = File(destFilePath);
     RandomAccessFile raf;
     try {
       raf = outFile.openSync(mode: FileMode.writeOnly);
     } on FileSystemException catch(e) {
-      throw AesCryptIOException('Failed to open $source_file for writing.', e.path, e.osError);
+      throw AesCryptIOException('Failed to open $srcFilePath for writing.', e.path, e.osError);
     }
     try {
       raf.writeFromSync(decrypted_data_full, 0,
@@ -471,37 +480,37 @@ class AesCrypt {
 
     } on FileSystemException catch(e) {
       raf.closeSync();
-      throw AesCryptIOException('Failed to write to file $source_file.', e.path, e.osError);
+      throw AesCryptIOException('Failed to write to file $srcFilePath.', e.path, e.osError);
     }
     raf.closeSync();
 
     decrypted_data_full.fillByZero();
     _log('DECRYPTION', 'Completed');
-    return dest_file;
+    return destFilePath;
   }
 
 
-  Future<String> decryptFile(String source_file, [String dest_file = '']) async {
-    source_file = source_file.trim();
-    dest_file = dest_file.trim();
+  Future<String> decryptFile(String srcFilePath, [String destFilePath = '']) async {
+    srcFilePath = srcFilePath.trim();
+    destFilePath = destFilePath.trim();
 
     AesCryptArgumentError.checkNotNullOrEmpty(_password, 'Empty password.');
-    AesCryptArgumentError.checkNotNullOrEmpty(source_file, 'Empty source file path.');
-    if (source_file == dest_file) throw AesCryptArgumentError('Source file path and decrypted file path are the same.');
+    AesCryptArgumentError.checkNotNullOrEmpty(srcFilePath, 'Empty source file path.');
+    if (srcFilePath == destFilePath) throw AesCryptArgumentError('Source file path and decrypted file path are the same.');
 
     _log('DECRYPTION', 'Started');
     _log('PASSWORD', _passBytes);
 
-    File inFile = File(source_file);
+    File inFile = File(srcFilePath);
     if (! await inFile.exists()) {
-      throw FileSystemException('Source file $source_file does not exist.');
+      throw FileSystemException('Source file $srcFilePath does not exist.');
     }
 
     RandomAccessFile f;
     try {
       f = await inFile.open(mode: FileMode.read);
     } on FileSystemException catch(e) {
-      throw FileSystemException('Failed to open file $source_file for reading.', e.path, e.osError);
+      throw FileSystemException('Failed to open file $srcFilePath for reading.', e.path, e.osError);
     }
 
     Map<_Data,Uint8List> keys = await _readKeys(f);
@@ -525,28 +534,28 @@ class AesCrypt {
     final Uint8List decrypted_data_full = aesDecrypt(encrypted_data);
 
     _log('WRITE', 'Started');
-    dest_file = _makeDestFilenameFromSource(source_file, dest_file, _Action.decripting);
-    dest_file = await _modifyDestinationFilename(dest_file);
-    File outFile = File(dest_file);
+    destFilePath = _makeDestFilenameFromSource(srcFilePath, destFilePath, _Action.decripting);
+    destFilePath = await _modifyDestinationFilename(destFilePath);
+    File outFile = File(destFilePath);
     RandomAccessFile raf;
     try {
       raf = await outFile.open(mode: FileMode.writeOnly);
     } on FileSystemException catch(e) {
-      throw AesCryptIOException('Failed to open $source_file for writing.', e.path, e.osError);
+      throw AesCryptIOException('Failed to open $srcFilePath for writing.', e.path, e.osError);
     }
     try {
       await raf.writeFrom(decrypted_data_full, 0,
           decrypted_data_full.length - (file_size_modulo == 0? 0: 16 - file_size_modulo));
     } on FileSystemException catch(e) {
       await raf.closeSync();
-      throw AesCryptIOException('Failed to write to file $source_file.', e.path, e.osError);
+      throw AesCryptIOException('Failed to write to file $srcFilePath.', e.path, e.osError);
     }
     await raf.closeSync();
 
     decrypted_data_full.fillByZero();
     _log('DECRYPTION', 'Completed');
 
-    return dest_file;
+    return destFilePath;
   }
 
 
@@ -1635,79 +1644,79 @@ class AesCrypt {
   }
 
 
-  String _makeDestFilenameFromSource(String source_file, String dest_file, _Action action) {
-    assert(!source_file.isNullOrEmpty);
+  String _makeDestFilenameFromSource(String srcFilePath, String destFilePath, _Action action) {
+    assert(!srcFilePath.isNullOrEmpty);
 
-    if (dest_file.isNullOrEmpty) {
+    if (destFilePath.isNullOrEmpty) {
       switch(action) {
         case _Action.encrypting:
-          dest_file = source_file + _encFileExt;
+          destFilePath = srcFilePath + _encFileExt;
           break;
         case _Action.decripting:
-          if (source_file != _encFileExt && source_file.endsWith(_encFileExt)) {
-            dest_file = source_file.substring(0, source_file.length - 4);
+          if (srcFilePath != _encFileExt && srcFilePath.endsWith(_encFileExt)) {
+            destFilePath = srcFilePath.substring(0, srcFilePath.length - 4);
           } else {
-            dest_file = source_file + '.decrypted';
+            destFilePath = srcFilePath + '.decrypted';
           }
           break;
       }
     }
 
-    return dest_file;
+    return destFilePath;
   }
 
   
-  String _modifyDestinationFilenameSync(String dest_file) {
+  String _modifyDestinationFilenameSync(String destFilePath) {
     switch(_fnMode) {
       case AesCryptFnMode.auto:
         int i = 1;
-        while (_isPathExistsSync(dest_file))	{
-          dest_file = dest_file.replaceAllMapped(RegExp(r'(.*/)?([^\.]*?)(\(\d+\)\.|\.)(.*)'),
+        while (_isPathExistsSync(destFilePath))	{
+          destFilePath = destFilePath.replaceAllMapped(RegExp(r'(.*/)?([^\.]*?)(\(\d+\)\.|\.)(.*)'),
                   (Match m) => '${m[1]??''}${m[2]}($i).${m[4]}');
           ++i;
         }
         break;
       case AesCryptFnMode.warn:
-        if (_isPathExistsSync(dest_file)) {
-          throw AesCryptException('Destination file $dest_file already exists.', AesCryptExceptionType.destFileExists);
+        if (_isPathExistsSync(destFilePath)) {
+          throw AesCryptException('Failed to overwrite existing file $destFilePath. An cverwriting is forbidden by \'AesCryptFnMode.warn\' file naming mode.', AesCryptExceptionType.destFileExists);
         }
         break;
       case AesCryptFnMode.overwrite:
-        if (FileSystemEntity.typeSync(dest_file) != FileSystemEntityType.file) {
-          throw AesCryptArgumentError('Destination path $dest_file is not a file and can not be overwriten.');
+        if (FileSystemEntity.typeSync(destFilePath) != FileSystemEntityType.file) {
+          throw AesCryptArgumentError('Destination path $destFilePath is not a file and can not be overwriten.');
         }
-        File(dest_file).deleteSync();
+        File(destFilePath).deleteSync();
         break;
     }
 
-    return dest_file;
+    return destFilePath;
   }
 
 
-  Future<String> _modifyDestinationFilename(String dest_file) async {
+  Future<String> _modifyDestinationFilename(String destFilePath) async {
     switch(_fnMode) {
       case AesCryptFnMode.auto:
         int i = 1;
-        while (await _isPathExists(dest_file))	{
-          dest_file = dest_file.replaceAllMapped(RegExp(r'(.*/)?([^\.]*?)(\(\d+\)\.|\.)(.*)'),
+        while (await _isPathExists(destFilePath))	{
+          destFilePath = destFilePath.replaceAllMapped(RegExp(r'(.*/)?([^\.]*?)(\(\d+\)\.|\.)(.*)'),
                   (Match m) => '${m[1]??''}${m[2]}($i).${m[4]}');
           ++i;
         }
         break;
       case AesCryptFnMode.warn:
-        if (await _isPathExists(dest_file)) {
-          throw AesCryptException('Destination file $dest_file already exists.', AesCryptExceptionType.destFileExists);
+        if (await _isPathExists(destFilePath)) {
+          throw AesCryptException('Failed to overwrite existing file $destFilePath. An cverwriting is forbidden by \'AesCryptFnMode.warn\' file naming mode.', AesCryptExceptionType.destFileExists);
         }
         break;
       case AesCryptFnMode.overwrite:
-        if ((await FileSystemEntity.type(dest_file)) != FileSystemEntityType.file) {
-          throw AesCryptArgumentError('Destination path $dest_file is not a file and can not be overwriten.');
+        if ((await FileSystemEntity.type(destFilePath)) != FileSystemEntityType.file) {
+          throw AesCryptArgumentError('Destination path $destFilePath is not a file and can not be overwriten.');
         }
-        await File(dest_file).delete();
+        await File(destFilePath).delete();
         break;
     }
 
-    return dest_file;
+    return destFilePath;
   }
 
 
