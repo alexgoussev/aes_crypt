@@ -59,21 +59,21 @@ class AesCrypt {
       key = 'CREATED_BY';
       _userdata[key] = createdBy.toUTF8Bytes();
       if (key.length + _userdata[key].length + 1 > 255) {
-        throw AesCryptArgumentError('User data `$key` is too long. Total length should not exceed 255 bytes.');
+        throw AesCryptArgumentError('User data \'$key\' is too long. Total length should not exceed 255 bytes.');
       }
     }
     if (createdOn.isNotEmpty) {
       key = 'CREATED_DATE';
       _userdata[key] = createdOn.toUTF8Bytes();
       if (key.length + _userdata[key].length + 1 > 255) {
-        throw AesCryptArgumentError('User data `$key` is too long. Total length should not exceed 255 bytes.');
+        throw AesCryptArgumentError('User data \'$key\' is too long. Total length should not exceed 255 bytes.');
       }
     }
     if (createdAt.isNotEmpty) {
       key = 'CREATED_TIME';
       _userdata[key] = createdAt.toUTF8Bytes();
       if (key.length + _userdata[key].length + 1 > 255) {
-        throw AesCryptArgumentError('User data `$key` is too long. Total length should not exceed 255 bytes.');
+        throw AesCryptArgumentError('User data \'$key\' is too long. Total length should not exceed 255 bytes.');
       }
     }
   }
@@ -364,7 +364,7 @@ class AesCrypt {
     final int file_size_modulo = _readChunkIntSync(f, 1, 'file size modulo');
     _log('FILE SIZE MODULO', file_size_modulo);
     if (file_size_modulo < 0 || file_size_modulo >= 16) {
-      throw AesCryptDataException('Invalid file size modulos: $file_size_modulo');
+      throw AesCryptDataException('Invalid file size modulo: $file_size_modulo');
     }
 
     final Uint8List hmac_2 = _readChunkBytesSync(f, 32, 'HMAC 2');
@@ -419,7 +419,7 @@ class AesCrypt {
     final int file_size_modulo = await _readChunkInt(f, 1, 'file size modulo');
     _log('FILE SIZE MODULO', file_size_modulo);
     if (file_size_modulo < 0 || file_size_modulo >= 16) {
-      throw AesCryptDataException('Invalid file size modulos: $file_size_modulo');
+      throw AesCryptDataException('Invalid file size modulo: $file_size_modulo');
     }
 
     final Uint8List hmac_2 = await _readChunkBytes(f, 32, 'HMAC 2');
@@ -477,7 +477,7 @@ class AesCrypt {
     final int file_size_modulo = _readChunkIntSync(f, 1, 'file size modulo');
     _log('FILE SIZE MODULO', file_size_modulo);
     if (file_size_modulo < 0 || file_size_modulo >= 16) {
-      throw AesCryptDataException('Invalid file size modulos: $file_size_modulo');
+      throw AesCryptDataException('Invalid file size modulo: $file_size_modulo');
     }
 
     final Uint8List hmac_2 = _readChunkBytesSync(f, 32, 'HMAC 2');
@@ -546,7 +546,7 @@ class AesCrypt {
     final int file_size_modulo = await _readChunkInt(f, 1, 'file size modulo');
     _log('FILE SIZE MODULO', file_size_modulo);
     if (file_size_modulo < 0 || file_size_modulo >= 16) {
-      throw AesCryptDataException('Invalid file size modulos: $file_size_modulo');
+      throw AesCryptDataException('Invalid file size modulo: $file_size_modulo');
     }
 
     final Uint8List hmac_2 = await _readChunkBytes(f, 32, 'HMAC 2');
@@ -805,13 +805,13 @@ class AesCrypt {
     for (i = 16; i < 64; i++) {
       s0 = _rotr(_chunkBuff[i - 15], 7) ^ _rotr(_chunkBuff[i - 15], 18) ^ (_chunkBuff[i - 15] >> 3);
       s1 = _rotr(_chunkBuff[i - 2], 17) ^ _rotr(_chunkBuff[i - 2], 19) ^ (_chunkBuff[i - 2] >> 10);
-      // _chunkBuff is Uint32List and because of that it does'n need in ` & _mask32` at the end
+      // _chunkBuff is Uint32List and because of that it does'n need in '& _mask32' at the end
       _chunkBuff[i] = _chunkBuff[i - 16] + s0 + _chunkBuff[i - 7] + s1;
     }
 
     a = _h0; b = _h1; c = _h2; d = _h3; e = _h4; f = _h5; g = _h6; h = _h7;
 
-    // This implementation was taken from `pointycastle` library
+    // This implementation was taken from 'pointycastle' library
     // https://pub.dev/packages/pointycastle
     int t = 0;
     for (i = 0; i < 8; ++i) {
@@ -1260,7 +1260,7 @@ class AesCrypt {
     // add round key
     _addRoundKey(i);
 
-    // place state matrix `s into encBlock in column order
+    // place state matrix _s into encBlock in column order
     for (int i = 0; i < 4*_Nb; ++i) {
       encBlock[i] = _s[i % 4][(i - i%_Nb) ~/ _Nb];
     }
@@ -1482,13 +1482,13 @@ class AesCrypt {
       _log('ACTUAL HMAC', hash);
       switch(ht) {
         case _HmacType.HMAC1:
-          throw AesCryptDataException('Failed to validate integrity of encryption keys. Wrong `${ht.name}`. Incorrect password or corrupted file.');
+          throw AesCryptDataException('Failed to validate the integrity of encryption keys. Incorrect password or corrupted file.');
           break;
         case _HmacType.HMAC2:
-          throw AesCryptDataException('Failed to validate integrity of encrypted data. Wrong `${ht.name}`. The file is corrupted.');
+          throw AesCryptDataException('Failed to validate the integrity of encrypted data. The file is corrupted.');
           break;
         case _HmacType.HMAC:
-          throw AesCryptDataException('Failed to validate integrity of decrypted data. Wrong `${ht.name}`. Incorrect password or corrupted file.');
+          throw AesCryptDataException('Failed to validate the integrity of decrypted data. Incorrect password or corrupted file.');
           break;
       }
     }
@@ -1559,7 +1559,7 @@ class AesCrypt {
     final Uint8List head = _readChunkBytesSync(f, 3, 'file header');
     final Uint8List expected_head = Uint8List.fromList([65, 69, 83]);
     if (head.isNotEqual(expected_head)) {
-      throw AesCryptDataException('The chunk `file header` was expected to be ${expected_head.toHexString()} but found ${head.toHexString()}');
+      throw AesCryptDataException('The chunk \'file header\' was expected to be ${expected_head.toHexString()} but found ${head.toHexString()}');
     }
 
     final int version_chunk = _readChunkIntSync(f, 1, 'version byte');
@@ -1617,7 +1617,7 @@ class AesCrypt {
     final Uint8List head = await _readChunkBytes(f, 3, 'file header');
     final Uint8List expected_head = Uint8List.fromList([65, 69, 83]);
     if (head.isNotEqual(expected_head)) {
-      throw AesCryptDataException('The chunk `file header` was expected to be ${expected_head.toHexString()} but found ${head.toHexString()}');
+      throw AesCryptDataException('The chunk \'file header\' was expected to be ${expected_head.toHexString()} but found ${head.toHexString()}');
     }
 
     final int version_chunk = await _readChunkInt(f, 1, 'version byte');
@@ -1710,7 +1710,7 @@ class AesCrypt {
         if (FileSystemEntity.typeSync(destFilePath) != FileSystemEntityType.file) {
           throw AesCryptArgumentError('Destination path $destFilePath is not a file and can not be overwriten.');
         }
-        File(destFilePath).deleteSync();
+        //File(destFilePath).deleteSync();
         break;
     }
 
@@ -1737,7 +1737,7 @@ class AesCrypt {
         if ((await FileSystemEntity.type(destFilePath)) != FileSystemEntityType.file) {
           throw AesCryptArgumentError('Destination path $destFilePath is not a file and can not be overwriten.');
         }
-        await File(destFilePath).delete();
+        //await File(destFilePath).delete();
         break;
     }
 
@@ -1752,10 +1752,10 @@ class AesCrypt {
     try {
       data = f.readSync(num_bytes);
     } on FileSystemException catch(e) {
-      throw FileSystemException('Failed to read chunk `$chunk_name` of $num_bytes bytes.', e.path, e.osError);
+      throw FileSystemException('Failed to read chunk \'$chunk_name\' of $num_bytes bytes.', e.path, e.osError);
     }
     if (data.length != num_bytes) {
-      throw AesCryptDataException('Failed to read chunk `$chunk_name` of $num_bytes bytes, only found ${data.length} bytes.');
+      throw AesCryptDataException('Failed to read chunk \'$chunk_name\' of $num_bytes bytes, only found ${data.length} bytes.');
     }
 
     switch (num_bytes) {
@@ -1774,7 +1774,7 @@ class AesCrypt {
     }
 
     if (expected_value != null && result != expected_value) {
-      throw AesCryptDataException('The chunk `$chunk_name` was expected to be 0x${expected_value.toRadixString(16).toUpperCase()} but found 0x${data.toHexString()}');
+      throw AesCryptDataException('The chunk \'$chunk_name\' was expected to be 0x${expected_value.toRadixString(16).toUpperCase()} but found 0x${data.toHexString()}');
     }
 
     return result;
@@ -1788,10 +1788,10 @@ class AesCrypt {
     try {
       data = await f.read(num_bytes);
     } on FileSystemException catch(e) {
-      throw FileSystemException('Failed to read chunk `$chunk_name` of $num_bytes bytes.', e.path, e.osError);
+      throw FileSystemException('Failed to read chunk \'$chunk_name\' of $num_bytes bytes.', e.path, e.osError);
     }
     if (data.length != num_bytes) {
-      throw AesCryptDataException('Failed to read chunk `$chunk_name` of $num_bytes bytes, only found ${data.length} bytes.');
+      throw AesCryptDataException('Failed to read chunk \'$chunk_name\' of $num_bytes bytes, only found ${data.length} bytes.');
     }
 
     switch (num_bytes) {
@@ -1810,7 +1810,7 @@ class AesCrypt {
     }
 
     if (expected_value != null && result != expected_value) {
-      throw AesCryptDataException('The chunk `$chunk_name` was expected to be 0x${expected_value.toRadixString(16).toUpperCase()} but found 0x${data.toHexString()}');
+      throw AesCryptDataException('The chunk \'$chunk_name\' was expected to be 0x${expected_value.toRadixString(16).toUpperCase()} but found 0x${data.toHexString()}');
     }
 
     return result;
@@ -1822,10 +1822,10 @@ class AesCrypt {
     try {
       data = f.readSync(num_bytes);
     } on FileSystemException catch(e) {
-      throw AesCryptIOException('Failed to read chunk `$chunk_name` of $num_bytes bytes.', e.path, e.osError);
+      throw AesCryptIOException('Failed to read chunk \'$chunk_name\' of $num_bytes bytes.', e.path, e.osError);
     }
     if (data.length != num_bytes) {
-      throw AesCryptDataException('Failed to read chunk `$chunk_name` of $num_bytes bytes, only found ${data.length} bytes.');
+      throw AesCryptDataException('Failed to read chunk \'$chunk_name\' of $num_bytes bytes, only found ${data.length} bytes.');
     }
     return data;
   }
@@ -1836,10 +1836,10 @@ class AesCrypt {
     try {
       data = await f.read(num_bytes);
     } on FileSystemException catch(e) {
-      throw AesCryptIOException('Failed to read chunk `$chunk_name` of $num_bytes bytes.', e.path, e.osError);
+      throw AesCryptIOException('Failed to read chunk \'$chunk_name\' of $num_bytes bytes.', e.path, e.osError);
     }
     if (data.length != num_bytes) {
-      throw AesCryptDataException('Failed to read chunk `$chunk_name` of $num_bytes bytes, only found ${data.length} bytes.');
+      throw AesCryptDataException('Failed to read chunk \'$chunk_name\' of $num_bytes bytes, only found ${data.length} bytes.');
     }
     return data;
   }
