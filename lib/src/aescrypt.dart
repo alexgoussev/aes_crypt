@@ -1063,7 +1063,7 @@ class AesCrypt {
       throw AesCryptArgumentError('Invalid data length for AES: ${data.length} bytes.');
     }
 
-    Uint8List y = Uint8List(data.length); // returned cipher text;
+    Uint8List encData = Uint8List(data.length); // returned cipher text;
     Uint8List t = Uint8List(16); // 16-byte block to hold the temporary input of the cipher
     Uint8List block16 = Uint8List.fromList(_aesIV); // 16-byte block to hold the temporary output of the cipher
 
@@ -1076,7 +1076,7 @@ class AesCrypt {
             else t[j] = 0;
           }
           block16 = _aesEncryptBlock(t);
-          y.setRange(i, i+16, block16);
+          encData.setRange(i, i+16, block16);
         }
         break;
       case AesMode.cbc:
@@ -1087,7 +1087,7 @@ class AesCrypt {
             t[j] = ((i+j) < data.length? data[i+j] : 0) ^ block16[j];
           }
           block16 = _aesEncryptBlock(t);
-          y.setRange(i, i+16, block16);
+          encData.setRange(i, i+16, block16);
         }
         break;
       case AesMode.cfb:
@@ -1098,7 +1098,7 @@ class AesCrypt {
             // XOR the cipher output with the plaintext.
             block16[j] = ((i+j) < data.length? data[i+j] : 0) ^ block16[j];
           }
-          y.setRange(i, i+16, block16);
+          encData.setRange(i, i+16, block16);
         }
         break;
       case AesMode.ofb:
@@ -1109,12 +1109,12 @@ class AesCrypt {
             // XOR the cipher output with the plaintext.
             block16[j] = ((i+j) < data.length? data[i+j] : 0) ^ t[j];
           }
-          y.setRange(i, i+16, block16);
+          encData.setRange(i, i+16, block16);
           block16 = Uint8List.fromList(t);
         }
         break;
     }
-    return y;
+    return encData;
   }
 
   /// Decrypts data
@@ -1126,7 +1126,7 @@ class AesCrypt {
       throw AesCryptArgumentError('Invalid data length for AES: ${data.length} bytes.');
     }
 
-    Uint8List x = Uint8List(data.length); // returned decrypted data;
+    Uint8List decData = Uint8List(data.length); // returned decrypted data;
     Uint8List t = Uint8List(16); // 16-byte block
     Uint8List x_block;
     Uint8List block16 = Uint8List.fromList(_aesIV); // 16-byte block to hold the temporary output of the cipher
@@ -1139,7 +1139,7 @@ class AesCrypt {
             else t[j] = 0;
           }
           x_block = _aesDecryptBlock(t);
-          x.setRange(i, i+16, x_block);
+          decData.setRange(i, i+16, x_block);
         }
         break;
       case AesMode.cbc:
@@ -1154,7 +1154,7 @@ class AesCrypt {
             x_block[j] = x_block[j] ^ block16[j];
           }
           block16 = Uint8List.fromList(t);
-          x.setRange(i, i+16, x_block);
+          decData.setRange(i, i+16, x_block);
         }
         break;
       case AesMode.cfb:
@@ -1166,20 +1166,20 @@ class AesCrypt {
             x_block[j] = ((i+j) < data.length? data[i+j] : 0) ^ x_block[j];
             block16[j] = data[i+j];
           }
-          x.setRange(i, i+16, x_block);
+          decData.setRange(i, i+16, x_block);
         }
         break;
       case AesMode.ofb:
-        x = aesEncrypt(data);
+        decData = aesEncrypt(data);
         break;
     }
-    return x;
+    return decData;
   }
 
 
   // Encrypts the 16-byte plain text.
   Uint8List _aesEncryptBlock(Uint8List data) {
-    Uint8List y = Uint8List(16); // 16-byte string
+    Uint8List encBlock = Uint8List(16); // 16-byte string
     int i;
 
     // place input data into the initial state matrix in column order
@@ -1209,17 +1209,17 @@ class AesCrypt {
     // add round key
     _addRoundKey(i);
 
-    // place state matrix `s into y in column order
+    // place state matrix `s into encBlock in column order
     for (int i = 0; i < 4*_Nb; ++i) {
-      y[i] = _s[i % 4][(i - i%_Nb) ~/ _Nb];
+      encBlock[i] = _s[i % 4][(i - i%_Nb) ~/ _Nb];
     }
-    return y;
+    return encBlock;
   }
 
 
   // Decrypts the 16-byte cipher text.
   Uint8List _aesDecryptBlock(Uint8List data) {
-    Uint8List x = Uint8List(16); // 16-byte string
+    Uint8List decBlock = Uint8List(16); // 16-byte string
     int i;
 
     // place input data into the initial state matrix in column order
@@ -1248,11 +1248,11 @@ class AesCrypt {
     // add round key
     _addRoundKey(i);
 
-    // place state matrix s into x in column order
+    // place state matrix s into decBlock in column order
     for (int i = 0; i < 4*_Nb; ++i) {
-      x[i] = _s[i % 4][(i - i%_Nb) ~/ _Nb];
+      decBlock[i] = _s[i % 4][(i - i%_Nb) ~/ _Nb];
     }
-    return x;
+    return decBlock;
   }
 
 
