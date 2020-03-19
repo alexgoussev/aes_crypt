@@ -363,7 +363,8 @@ class AesCrypt {
     aesSetParams(keys[_Data.key2], keys[_Data.iv2], AesMode.cbc);
     final Uint8List decrypted_data_full = aesDecrypt(encrypted_data);
 
-    final Uint8List decrypted_data = Uint8List.fromList(decrypted_data_full.sublist(0, decrypted_data_full.length - (16 - file_size_modulo)));
+    final Uint8List decrypted_data = Uint8List.fromList(decrypted_data_full.sublist(0,
+        decrypted_data_full.length - (file_size_modulo == 0? 0: 16 - file_size_modulo)));
 
     decrypted_data_full.fillByZero();
     _log('DECRYPTION', 'Completed');
@@ -412,7 +413,8 @@ class AesCrypt {
     aesSetParams(keys[_Data.key2], keys[_Data.iv2], AesMode.cbc);
     final Uint8List decrypted_data_full = aesDecrypt(encrypted_data);
 
-    final Uint8List decrypted_data = Uint8List.fromList(decrypted_data_full.sublist(0, decrypted_data_full.length - (16 - file_size_modulo)));
+    final Uint8List decrypted_data = Uint8List.fromList(decrypted_data_full.sublist(0,
+        decrypted_data_full.length - (file_size_modulo == 0? 0: 16 - file_size_modulo)));
 
     decrypted_data_full.fillByZero();
     _log('DECRYPTION', 'Completed');
@@ -475,7 +477,9 @@ class AesCrypt {
       throw AesCryptIOException('Failed to open $source_file for writing.', e.path, e.osError);
     }
     try {
-      raf.writeFromSync(decrypted_data_full, 0, decrypted_data_full.length - (16 - file_size_modulo));
+      raf.writeFromSync(decrypted_data_full, 0,
+          decrypted_data_full.length - (file_size_modulo == 0? 0: 16 - file_size_modulo));
+
     } on FileSystemException catch(e) {
       raf.closeSync();
       throw AesCryptIOException('Failed to write to file $source_file.', e.path, e.osError);
@@ -542,7 +546,8 @@ class AesCrypt {
       throw AesCryptIOException('Failed to open $source_file for writing.', e.path, e.osError);
     }
     try {
-      await raf.writeFrom(decrypted_data_full, 0, decrypted_data_full.length - (16 - file_size_modulo));
+      await raf.writeFrom(decrypted_data_full, 0,
+          decrypted_data_full.length - (file_size_modulo == 0? 0: 16 - file_size_modulo));
     } on FileSystemException catch(e) {
       await raf.closeSync();
       throw AesCryptIOException('Failed to write to file $source_file.', e.path, e.osError);
