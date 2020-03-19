@@ -34,7 +34,8 @@ class AesCrypt {
     _aesKey = Uint8List(0);
   }
 
-  set password(String password) {
+  /// Set password for encryption/decryption.
+  void setPassword(String password) {
     AesCryptArgumentError.checkNotNullOrEmpty(password, 'Empty password.');
     _password = password;
     _passBytes = password.toUTF16BytesLE();
@@ -125,8 +126,14 @@ class AesCrypt {
   }
 
 
-  Future<String> encryptDataToFile(List<int> source_data, String dest_file) async {
-    dest_file = dest_file.trim();
+  String encryptStringToFileSync(String srcString, String destFilePath, {bool utf16 = false}) {
+    Uint8List srcData = utf16? srcString.toUTF16BytesBE() : utf8.encode(srcString);
+    return encryptDataToFileSync(srcData, destFilePath);
+  }
+
+
+  Future<String> encryptDataToFile(List<int> srcData, String destFilePath) async {
+    destFilePath = destFilePath.trim();
 
     AesCryptArgumentError.checkNotNullOrEmpty(_password, 'Empty password.');
     AesCryptArgumentError.checkNotNullOrEmpty(destFilePath, 'Empty encrypted file path.');
@@ -172,9 +179,15 @@ class AesCrypt {
   }
 
 
-  String encryptFileSync(String source_file, [String dest_file = '']) {
-    source_file = source_file.trim();
-    dest_file = dest_file.trim();
+  Future<String> encryptStringToFile(String srcString, String destFilePath, {bool utf16 = false}) async {
+    Uint8List srcData = utf16? srcString.toUTF16BytesBE() : utf8.encode(srcString);
+    return await encryptDataToFile(srcData, destFilePath);
+  }
+
+
+  String encryptFileSync(String srcFilePath, [String destFilePath = '']) {
+    srcFilePath = srcFilePath.trim();
+    destFilePath = destFilePath.trim();
 
     AesCryptArgumentError.checkNotNullOrEmpty(_password, 'Empty password.');
     AesCryptArgumentError.checkNotNullOrEmpty(srcFilePath, 'Empty source file path.');
@@ -371,8 +384,14 @@ class AesCrypt {
   }
 
 
-  Future<Uint8List> decryptDataFromFile(String source_file) async {
-    source_file = source_file.trim();
+  String decryptStringFromFileSync(String srcFilePath, {bool utf16 = false}) {
+    Uint8List decData = decryptDataFromFileSync(srcFilePath);
+    return utf16? decData.toUTF16StringBE() : utf8.decode(decData);
+  }
+
+
+  Future<Uint8List> decryptDataFromFile(String srcFilePath) async {
+    srcFilePath = srcFilePath.trim();
 
     AesCryptArgumentError.checkNotNullOrEmpty(_password, 'Empty password.');
     AesCryptArgumentError.checkNotNullOrEmpty(srcFilePath, 'Empty source file path.');
@@ -421,9 +440,15 @@ class AesCrypt {
   }
 
 
-  String decryptFileSync(String source_file, [String dest_file = '']) {
-    source_file = source_file.trim();
-    dest_file = dest_file.trim();
+  Future<String> decryptStringFromFile(String srcFilePath, {bool utf16 = false}) async {
+    Uint8List decData = await decryptDataFromFile(srcFilePath);
+    return utf16? decData.toUTF16StringBE() : utf8.decode(decData);
+  }
+
+
+  String decryptFileSync(String srcFilePath, [String destFilePath = '']) {
+    srcFilePath = srcFilePath.trim();
+    destFilePath = destFilePath.trim();
 
     AesCryptArgumentError.checkNotNullOrEmpty(_password, 'Empty password.');
     AesCryptArgumentError.checkNotNullOrEmpty(srcFilePath, 'Empty source file path.');
