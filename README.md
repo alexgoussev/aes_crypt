@@ -170,9 +170,10 @@ Uint8List hmac = crypt.hmacSha256(key, srcData);
 
 ## Support
 
-Please file feature requests and bugs at the [issue tracker][tracker].
+Please file feature requests and bugs at the [issue tracker](https://github.com/alexgoussev/aes_crypt/issues)
 
-[tracker]: http://example.com/issues/replaceme
+I would be grateful if you help me to correct grammar and syntactical error in this readme.  
+
 
 ## Acknowledgments
 
