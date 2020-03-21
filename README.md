@@ -29,10 +29,14 @@ applications for other platforms, please visit [AESCrypt's official website](htt
 
 ## Usage
 
-Notice: All functions having 'Sync' at the end of their names are synchronous.
-If you need asynchronous ones, please just remove 'Sync' from the end of function name.
+In the `pubspec.yaml` of your project, add the following dependency:
+```yaml
+dependencies:
+  ...
+  aes_crypt: ^0.1.0
+```
 
-Add import:
+In your Dart code add the following import:
 ```dart
 import 'dart:typed_data';
 import 'package:aes_crypt/aes_crypt.dart';
@@ -62,6 +66,10 @@ crypt.setOverwriteMode(AesCryptOwMode.warn);
 // exists, adds '(2)' to its name, then '(3)', etc. 
 crypt.setOverwriteMode(AesCryptOwMode.rename);
 ```
+
+*Notice: All functions having 'Sync' at the end of their names are synchronous.
+If you need asynchronous ones, please just remove 'Sync' from the end of function name.*
+
 
 File encryption/decryption:
 ```dart
