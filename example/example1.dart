@@ -5,35 +5,37 @@ import 'package:aes_crypt/aes_crypt.dart';
 // Synchronous file encryption/decryption example
 
 void main() {
-  String srcFilepath = './example/testfile.txt';
   String encFilepath;
   String decFilepath;
+
+  // The file to be encrypted
+  String srcFilepath = './example/testfile.txt';
 
   print('Unencrypted source file: $srcFilepath');
   print('File content: ' + File(srcFilepath).readAsStringSync() + '\n');
 
-  // Create an instance of AesCrypt class.
+  // Creates an instance of AesCrypt class.
   var crypt = AesCrypt();
 
-  // Set password for encryption/decryption.
-  // Optionally you can specify your password when creating an instance
+  // Sets encryption password.
+  // Optionally you can specify the password when creating an instance
   // of AesCrypt class like:
   // var crypt = AesCrypt('my cool password');
   crypt.setPassword('my cool password');
 
-  // Set mode for file naming.
-  // It's optional. By default the mode is 'AesCryptFnMode.auto'.
-  crypt.setFilenamingMode(AesCryptFnMode.warn);
+  // Sets overwrite mode.
+  // It's optional. By default the mode is 'AesCryptOwMode.warn'.
+  crypt.setOverwriteMode(AesCryptOwMode.warn);
 
   try {
-    // Encrypt './example/testfile.txt' file and save it to a file with an extension
-    // '.aes' added. In this case it will be './example/testfile.txt.aes'.
+    // Encrypts './example/testfile.txt' file and save encrypted file to a file with
+    // '.aes' extension added. In this case it will be './example/testfile.txt.aes'.
     // It returns a path to encrypted file.
     encFilepath = crypt.encryptFileSync('./example/testfile.txt');
     print('The encryption has been completed successfully.');
     print('Encrypted file: $encFilepath');
   } on AesCryptException catch (e) {
-    // It goes here if the file naming mode set as 'AesCryptFnMode.warn'
+    // It goes here if overwrite mode set as 'AesCryptFnMode.warn'
     // and encrypted file already exists.
     if (e.type == AesCryptExceptionType.destFileExists) {
       print('The encryption has been completed unsuccessfully.');
@@ -45,7 +47,7 @@ void main() {
   print('');
 
   try {
-    // Decrypt the file which has been just encrypted.
+    // Decrypts the file which has been just encrypted.
     // It returns a path to decrypted file.
     decFilepath = crypt.decryptFileSync(encFilepath);
     print('The decryption has been completed successfully.');
@@ -63,7 +65,8 @@ void main() {
   print('');
 
   try {
-    // Decrypt the file to another name.
+    // Decrypts the file which has been just encrypted and tries to save it under
+    // another name than source file name.
     decFilepath = crypt.decryptFileSync(encFilepath, './example/testfile_new.txt');
     print('The decryption has been completed successfully.');
     print('Decrypted file 2: $decFilepath');
@@ -78,9 +81,9 @@ void main() {
   print('');
 
   try {
-    // Decrypt the file to the same name as previous one but in another
-    // file naming mode 'AesCryptFnMode.auto'. See what will happens.
-    crypt.setFilenamingMode(AesCryptFnMode.auto);
+    // Decrypts the file to the same name as previous one but before sets
+    // another overwrite mode 'AesCryptFnMode.auto'. See what will happens.
+    crypt.setOverwriteMode(AesCryptOwMode.rename);
     decFilepath = crypt.decryptFileSync(encFilepath, './example/testfile_new.txt');
     print('The decryption has been completed successfully.');
     print('Decrypted file 3: $decFilepath');

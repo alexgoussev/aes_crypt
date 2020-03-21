@@ -6,7 +6,7 @@ void main() {
   String decString = '';
   String encFilepath = '';
 
-  // Source string to encrypt
+  // Source string to be encrypted
   String srcString =
       'Twas brillig, and the slithy toves did gyre and gimble in the wabe: '
       'All mimsy were the borogoves, and the mome raths outgrabe. '
@@ -17,7 +17,7 @@ void main() {
   // Creates an instance of AesCrypt class.
   var crypt = AesCrypt('my cool password');
 
-  // Encrypts source string and save it to a file './example/testfile2.txt.aes'.
+  // Encrypts source string and saves encrypted file as './example/testfile2.txt.aes'.
   // Third argument 'utf16' is optional. If it is not specified or set to 'false',
   // the string will be saved as UTF8 string, otherwise it will be saved as UTF16.
   // The function returns a path to encrypted file.
