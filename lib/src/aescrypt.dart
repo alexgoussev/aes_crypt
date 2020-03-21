@@ -1,6 +1,6 @@
 part of aes_crypt;
 
-enum AesCryptFnMode { auto, warn, overwrite }
+enum AesCryptOwMode { warn, rename, on }
 enum AesCryptExceptionType { destFileExists }
 enum AesMode { ecb, cbc, cfb, ofb }
 
@@ -18,7 +18,7 @@ class AesCrypt {
 
   String _password;
   Uint8List _passBytes;
-  AesCryptFnMode _fnMode;
+  AesCryptOwMode _owMode;
   Map<String, List<int>> _userdata;
   final Map<_Data, Uint8List> _dp = {}; // encrypted file data parts
 
@@ -26,7 +26,7 @@ class AesCrypt {
     _password = password;
     _passBytes = password.toUTF16BytesLE();
 
-    _fnMode = AesCryptFnMode.auto;
+    _owMode = AesCryptOwMode.warn;
     setUserData();
 
     _aesMode = AesMode.cbc;
@@ -41,17 +41,17 @@ class AesCrypt {
     _passBytes = password.toUTF16BytesLE();
   }
 
-  /// Set mode for file naming
-  void setFilenamingMode(AesCryptFnMode mode) => _fnMode = mode;
+  /// Set the mode for existing file overwriting
+  void setOverwriteMode(AesCryptOwMode mode) => _owMode = mode;
 
   /// Set standard extension tags used in the AES file format.
   ///
   /// [createdBy] is a developer-defined text string that identifies the software
-  ///   product, manufacturer, or other useful information (such as software version).
+  /// product, manufacturer, or other useful information (such as software version).
   /// [createdOn] indicates the date that the file was created.
-  ///   The format of the date string is YYYY-MM-DD.
+  /// The format of the date string is YYYY-MM-DD.
   /// [createdAt] indicates the time that the file was created. The format of the date string
-  ///   is in 24-hour format like HH:MM:SS (e.g, 21:15:04). The time zone is UTC.
+  /// is in 24-hour format like HH:MM:SS (e.g, 21:15:04). The time zone is UTC.
   void setUserData({String createdBy = 'Dart aes_crypt library', String createdOn = '', String createdAt =''}) {
     String key;
     _userdata = {};
@@ -79,7 +79,7 @@ class AesCrypt {
   }
 
 
-  String encryptDataToFileSync(List<int> srcData, String destFilePath) {
+  String encryptDataToFileSync(Uint8List srcData, String destFilePath) {
     destFilePath = destFilePath.trim();
 
     AesCryptArgumentError.checkNotNullOrEmpty(_password, 'Empty password.');
@@ -132,7 +132,7 @@ class AesCrypt {
   }
 
 
-  Future<String> encryptDataToFile(List<int> srcData, String destFilePath) async {
+  Future<String> encryptDataToFile(Uint8List srcData, String destFilePath) async {
     destFilePath = destFilePath.trim();
 
     AesCryptArgumentError.checkNotNullOrEmpty(_password, 'Empty password.');
@@ -678,7 +678,7 @@ class AesCrypt {
 
   /// Computes the HMAC-SHA256.
   Uint8List hmacSha256(Uint8List key, Uint8List data) {
-    if (key.isEmpty) throw AesCryptArgumentError('Empty key.');
+    AesCryptArgumentError.checkNotNullOrEmpty(key, 'Empty key.');
 
     final Int32x4 magic_i = Int32x4(0x36363636, 0x36363636, 0x36363636, 0x36363636);
     final Int32x4 magic_o = Int32x4(0x5C5C5C5C, 0x5C5C5C5C, 0x5C5C5C5C, 0x5C5C5C5C);
@@ -735,6 +735,8 @@ class AesCrypt {
   Uint8List sha256(Uint8List data) => _sha256(data);
 
   Uint8List _sha256(Uint8List data, [Uint8List hmacIpad]) {
+    AesCryptArgumentError.checkNotNullOrEmpty(data, 'Empty data.');
+
     ByteData chunk;
 
     int length = data.length;
@@ -900,7 +902,7 @@ class AesCrypt {
   //
   // Performance measurements on Intel Xeon E5420.
   //
-  // THis implementation is about 40 times faster than 'pointycastle' lib
+  // This implementation is about 40 times faster than 'pointycastle' lib
   // on 1 Mb data (1,4 vs 55-65 seconds), about 80 times faster on 2 Mb data
   // (2,7 vs 200-240 seconds), and so on.
 
@@ -1196,8 +1198,8 @@ class AesCrypt {
       case AesMode.cbc:
         for (int i = 0; i < data.length; i += 16) {
           for (int j = 0; j < 16; ++j) {
-            if ((i+j) < data.length) { t[j] = data[i+j]; }
-            else { t[j] = 0; }
+            if ((i+j) < data.length) t[j] = data[i+j];
+            else t[j] = 0;
           }
           x_block = _aesDecryptBlock(t);
           // XOR the iv/previous cipher block with this decrypted cipher block
@@ -1692,8 +1694,8 @@ class AesCrypt {
 
   
   String _modifyDestinationFilenameSync(String destFilePath) {
-    switch(_fnMode) {
-      case AesCryptFnMode.auto:
+    switch(_owMode) {
+      case AesCryptOwMode.rename:
         int i = 1;
         while (_isPathExistsSync(destFilePath))	{
           destFilePath = destFilePath.replaceAllMapped(RegExp(r'(.*/)?([^\.]*?)(\(\d+\)\.|\.)(.*)'),
@@ -1701,12 +1703,12 @@ class AesCrypt {
           ++i;
         }
         break;
-      case AesCryptFnMode.warn:
+      case AesCryptOwMode.warn:
         if (_isPathExistsSync(destFilePath)) {
-          throw AesCryptException('Failed to overwrite existing file $destFilePath. An cverwriting is forbidden by \'AesCryptFnMode.warn\' file naming mode.', AesCryptExceptionType.destFileExists);
+          throw AesCryptException('Failed to overwrite existing file $destFilePath. An cverwriting is forbidden by \'AesCryptOwMode.warn\' mode.', AesCryptExceptionType.destFileExists);
         }
         break;
-      case AesCryptFnMode.overwrite:
+      case AesCryptOwMode.on:
         if (_isPathExistsSync(destFilePath) && FileSystemEntity.typeSync(destFilePath) != FileSystemEntityType.file) {
           throw AesCryptArgumentError('Destination path $destFilePath is not a file and can not be overwriten.');
         }
@@ -1719,8 +1721,8 @@ class AesCrypt {
 
 
   Future<String> _modifyDestinationFilename(String destFilePath) async {
-    switch(_fnMode) {
-      case AesCryptFnMode.auto:
+    switch(_owMode) {
+      case AesCryptOwMode.rename:
         int i = 1;
         while (await _isPathExists(destFilePath))	{
           destFilePath = destFilePath.replaceAllMapped(RegExp(r'(.*/)?([^\.]*?)(\(\d+\)\.|\.)(.*)'),
@@ -1728,12 +1730,12 @@ class AesCrypt {
           ++i;
         }
         break;
-      case AesCryptFnMode.warn:
+      case AesCryptOwMode.warn:
         if (await _isPathExists(destFilePath)) {
-          throw AesCryptException('Failed to overwrite existing file $destFilePath. An cverwriting is forbidden by \'AesCryptFnMode.warn\' file naming mode.', AesCryptExceptionType.destFileExists);
+          throw AesCryptException('Failed to overwrite existing file $destFilePath. An cverwriting is forbidden by \'AesCryptOwMode.warn\' mode.', AesCryptExceptionType.destFileExists);
         }
         break;
-      case AesCryptFnMode.overwrite:
+      case AesCryptOwMode.on:
         if ((await _isPathExists(destFilePath)) && (await FileSystemEntity.type(destFilePath)) != FileSystemEntityType.file) {
           throw AesCryptArgumentError('Destination path $destFilePath is not a file and can not be overwriten.');
         }
