@@ -48,25 +48,25 @@ var crypt = AesCrypt();
 crypt.setPassword('my cool password');
 ```
 
-Optionally you can set overwriting mode for the file write operations:
+Optionally you can set overwrite mode for the file write operations:
 ```dart
-// Overwrites the file if it already exists.
+// Overwrite the file if it exists.
 crypt.setOverwriteMode(AesCryptOwMode.on);
 
-// If the file exists, throwns an exception 'AesCryptException' with the 'type' property
+// If the file exists, thrown an exception 'AesCryptException' with the 'type' property
 // set as 'AesCryptExceptionType.destFileExists' (see example1.dart in 'example' folder).
 // It is default mode.
 crypt.setOverwriteMode(AesCryptOwMode.warn);
 
-// If the file exists, adds index '(1)' to its' name and tries to save. If such file also exists,
-adds '(2)' to its name, then '(3)', etc. 
+// If the file exists, adds index '(1)' to its' name and tries to save. If such file also 
+// exists, adds '(2)' to its name, then '(3)', etc. 
 crypt.setOverwriteMode(AesCryptOwMode.rename);
 ```
 
 File encryption/decryption:
-```
-// Encrypts the file srcfile.txt and saves encrypted file under the name srcfile.txt.aes
-// You can specify relative or direct path to it.
+```dart
+// Encrypts the file srcfile.txt and saves encrypted file under original name with '.aes'
+// extention added (srcfile.txt.aes). You can specify relative or direct path to it.
 // To save the file into current directory specify it either as './srcfile.txt' or as 'srcfile.txt'.
 crypt.encryptFileSync('srcfile.txt');
 
@@ -82,6 +82,8 @@ crypt.decryptFileSync('srcfile.txt.aes', 'dec_file.txt');
 
 String encryption/decryption:
 ```dart
+String decryptedString;
+
 // String to be encrypted
 String srcString = 'some string';
 
@@ -92,10 +94,10 @@ crypt.encryptStringToFileSync(srcString, 'mytext.txt.aes');
 crypt.encryptStringToFileSync(srcString, 'mytext.txt.aes', , utf16: true);
 
 // Decrypt the file and interprets it as UTF8 string
-srcString = crypt.decryptStringFromFileSync('mytext.txt.aes');
+decryptedString = crypt.decryptStringFromFileSync('mytext.txt.aes');
 
 // Decrypt the file and interprets it as UTF16 string in Big Endian order
-srcString = crypt.decryptStringFromFileSync('mytext.txt.aes', utf16: true);
+decryptedString = crypt.decryptStringFromFileSync('mytext.txt.aes', utf16: true);
 ```
 
 Binary data encryption/decryption:
@@ -113,18 +115,18 @@ Uint8List decryptedData = crypt.decryptDataFromFileSync('mydata.bin.aes');
 AES encryption/decryption:
 ```dart
 // The encryption key. It should be 128, 192 or 256 bits long.
-Uint8List key = Uint8List.fromList([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]);
+Uint8List key = Uint8List.fromList([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]); // 128 bits
 
 // The initialization vector used in advanced cipher modes. It must be 128 bits long.
 Uint8List iv = Uint8List.fromList([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]);
 
-// The block cipher mode of operation. It can be one of the list:
+// The block cipher mode of operation. It can be one of the next values:
 //    AesMode.ecb - ECB (Electronic Code Book)
 //    AesMode.cbc - CBC (Cipher Block Chaining)
 //    AesMode.cfb - CFB (Cipher Feedback)
 //    AesMode.ofb - OFB (Output Feedback)
 // By default the mode is AesMode.cbc
-AesMode mode = AesMode.cbc;
+AesMode mode = AesMode.cbc; // Ok. I know it's meaningless here.
 
 // Sets the encryption key and IV.
 crypt.aesSetKeys(key, iv);
@@ -153,6 +155,7 @@ Uint8List hash = crypt.sha256(srcData);
 
 // Secret cryptographic key for HMAC
 Uint8List key = Uint8List.fromList([1,2,3]);
+
 // Computes HMAC-SHA256 code
 Uint8List hmac = crypt.hmacSha256(key, srcData);
 ```
