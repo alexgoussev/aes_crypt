@@ -766,37 +766,26 @@ class AesCrypt {
     }
 
     if (hmacIpad != null) {
-      for (int i = 0; i < 16; ++i) {
-        _chunkBuff[i] = hmacIpad.buffer.asByteData().getUint32(i * 4);
-      }
+      for (int i = 0; i < 16; ++i) _chunkBuff[i] = hmacIpad.buffer.asByteData().getUint32(i * 4);
       _processChunk();
     }
 
     for (int n = 0; n < chanksToProcess; n += 64) {
       chunk = data.buffer.asByteData(n, 64);
       for (int i = 0; i < 16; ++i) _chunkBuff[i] = chunk.getUint32(i * 4);
-
       _processChunk();
     }
 
     if (length < lengthPadded - 64) {
-      for (int i = 0; i < 16; ++i) {
-        _chunkBuff[i] = chunkLastPre.buffer.asByteData().getUint32(i * 4);
-      }
-
+      for (int i = 0; i < 16; ++i) _chunkBuff[i] = chunkLastPre.buffer.asByteData().getUint32(i * 4);
       _processChunk();
     }
 
-    for (int i = 0; i < 16; ++i) {
-      _chunkBuff[i] = chunkLast.buffer.asByteData().getUint32(i * 4);
-    }
-
+    for (int i = 0; i < 16; ++i) _chunkBuff[i] = chunkLast.buffer.asByteData().getUint32(i * 4);
     _processChunk();
 
     Uint32List hash = Uint32List.fromList([_h0, _h1, _h2, _h3, _h4, _h5, _h6, _h7]);
-    for (int i = 0; i < 8; ++i) {
-      hash[i] = _byteSwap32(hash[i]);
-    }
+    for (int i = 0; i < 8; ++i) hash[i] = _byteSwap32(hash[i]);
     return hash.buffer.asUint8List();
   }
 
