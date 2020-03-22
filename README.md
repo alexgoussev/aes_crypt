@@ -97,15 +97,24 @@ String srcString = 'some string';
 
 // Encrypts the string as UTF8 string and saves it into 'mytext.txt.aes' file.
 crypt.encryptStringToFileSync(srcString, 'mytext.txt.aes');
-
 // Encrypts the string as UTF16 Big Endian string and saves it into 'mytext.txt.aes' file.
-crypt.encryptStringToFileSync(srcString, 'mytext.txt.aes', , utf16: true);
+crypt.encryptStringToFileSync(srcString, 'mytext.txt.aes', utf16: true);
+// Encrypts the string as UTF16 Little Endian string and saves it into 'mytext.txt.aes' file.
+crypt.encryptStringToFileSync(srcString, 'mytext.txt.aes', utf16: true, endian: Endian.little);
+// Add 'bom: true' as an argument if you want to add byte order mark at the beginning of the string
+// before the encryption. For example:
+// crypt.encryptStringToFileSync(srcString, 'mytext.txt.aes', bom: true);
 
-// Decrypt the file and interprets it as UTF8 string
+// Decrypts the file and interprets it based on byte order mark if it has one.
+// Otherwise it will be interpreted as UTF8 text.
 decryptedString = crypt.decryptStringFromFileSync('mytext.txt.aes');
-
-// Decrypt the file and interprets it as UTF16 string in Big Endian order
+// Decrypts the file and interprets it based on byte order mark if it has one.
+// Otherwise it will be interpreted as UTF16 Big Endian text.
 decryptedString = crypt.decryptStringFromFileSync('mytext.txt.aes', utf16: true);
+// Decrypts the file and interprets it based on byte order mark if it has one.
+// Otherwise it will be interpreted as UTF16 Little Endian text.
+decryptedString = crypt.decryptStringFromFileSync('mytext.txt.aes', utf16: true, endian: Endian.little);
+
 ```
 
 Binary data encryption/decryption:
