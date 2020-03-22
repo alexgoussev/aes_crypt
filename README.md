@@ -88,7 +88,7 @@ crypt.decryptFileSync('srcfile.txt.aes');
 crypt.decryptFileSync('srcfile.txt.aes', 'dec_file.txt');
 ```
 
-String encryption/decryption:
+String <=> file encryption/decryption:
 ```dart
 String decryptedString;
 
@@ -117,7 +117,7 @@ decryptedString = crypt.decryptStringFromFileSync('mytext.txt.aes', utf16: true,
 
 ```
 
-Binary data encryption/decryption:
+Binary data <=> file encryption/decryption:
 ```dart
 // Binary data to be encrypted
 Uint8List srcData = Uint8List.fromList([1,2,3,4,5]);
@@ -129,7 +129,7 @@ crypt.encryptDataToFileSync(srcData, 'mydata.bin.aes');
 Uint8List decryptedData = crypt.decryptDataFromFileSync('mydata.bin.aes');
 ```
 
-AES encryption/decryption:
+Binary data AES encryption/decryption:
 ```dart
 // The encryption key. It should be 128, 192 or 256 bits long.
 Uint8List key = Uint8List.fromList([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]); // 128 bits
