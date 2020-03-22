@@ -24,7 +24,7 @@ class AesCrypt {
 
   AesCrypt([String password = '']) {
     _password = password;
-    _passBytes = password.toUTF16BytesLE();
+    _passBytes = password.toUtf16Bytes(Endian.little);
 
     _owMode = AesCryptOwMode.warn;
     setUserData();
@@ -38,7 +38,7 @@ class AesCrypt {
   void setPassword(String password) {
     AesCryptArgumentError.checkNotNullOrEmpty(password, 'Empty password.');
     _password = password;
-    _passBytes = password.toUTF16BytesLE();
+    _passBytes = password.toUtf16Bytes(Endian.little);
   }
 
   /// Set the mode for existing file overwriting
@@ -57,21 +57,21 @@ class AesCrypt {
     _userdata = {};
     if (createdBy.isNotEmpty) {
       key = 'CREATED_BY';
-      _userdata[key] = createdBy.toUTF8Bytes();
+      _userdata[key] = createdBy.toUtf8Bytes();
       if (key.length + _userdata[key].length + 1 > 255) {
         throw AesCryptArgumentError('User data \'$key\' is too long. Total length should not exceed 255 bytes.');
       }
     }
     if (createdOn.isNotEmpty) {
       key = 'CREATED_DATE';
-      _userdata[key] = createdOn.toUTF8Bytes();
+      _userdata[key] = createdOn.toUtf8Bytes();
       if (key.length + _userdata[key].length + 1 > 255) {
         throw AesCryptArgumentError('User data \'$key\' is too long. Total length should not exceed 255 bytes.');
       }
     }
     if (createdAt.isNotEmpty) {
       key = 'CREATED_TIME';
-      _userdata[key] = createdAt.toUTF8Bytes();
+      _userdata[key] = createdAt.toUtf8Bytes();
       if (key.length + _userdata[key].length + 1 > 255) {
         throw AesCryptArgumentError('User data \'$key\' is too long. Total length should not exceed 255 bytes.');
       }
@@ -126,9 +126,9 @@ class AesCrypt {
   }
 
 
-  String encryptStringToFileSync(String srcString, String destFilePath, {bool utf16 = false}) {
-    Uint8List srcData = utf16? srcString.toUTF16BytesBE() : utf8.encode(srcString);
-    return encryptDataToFileSync(srcData, destFilePath);
+  String encryptStringToFileSync(String srcString, String destFilePath, {bool utf16 = false, bool bom = false, Endian endian = Endian.big}) {
+    Uint8List bytes = utf16? srcString.toUtf16Bytes(endian, bom) : srcString.toUtf8Bytes(bom);
+    return encryptDataToFileSync(bytes, destFilePath);
   }
 
 
@@ -179,9 +179,9 @@ class AesCrypt {
   }
 
 
-  Future<String> encryptStringToFile(String srcString, String destFilePath, {bool utf16 = false}) async {
-    Uint8List srcData = utf16? srcString.toUTF16BytesBE() : utf8.encode(srcString);
-    return await encryptDataToFile(srcData, destFilePath);
+  Future<String> encryptStringToFile(String srcString, String destFilePath, {bool utf16 = false, bool bom = false, Endian endian = Endian.big}) async {
+    Uint8List bytes = utf16? srcString.toUtf16Bytes(endian, bom) : srcString.toUtf8Bytes(bom);
+    return await encryptDataToFile(bytes, destFilePath);
   }
 
 
@@ -384,9 +384,17 @@ class AesCrypt {
   }
 
 
-  String decryptStringFromFileSync(String srcFilePath, {bool utf16 = false}) {
+  String decryptStringFromFileSync(String srcFilePath, {bool utf16 = false, Endian endian = Endian.big}) {
     Uint8List decData = decryptDataFromFileSync(srcFilePath);
-    return utf16? decData.toUTF16StringBE() : utf8.decode(decData);
+    String srcString;
+    if ((decData[0] == 0xFE && decData[1] == 0xFF) || (decData[0] == 0xFF && decData[1] == 0xFE)) {
+      srcString = decData.toUtf16String();
+    } else if (decData[0] == 0xEF && decData[1] == 0xBB && decData[2] == 0xBF) {
+      srcString = decData.toUtf8String();
+    } else {
+      srcString = utf16? decData.toUtf16String(endian) : decData.toUtf8String();
+    }
+    return srcString;
   }
 
 
@@ -440,9 +448,17 @@ class AesCrypt {
   }
 
 
-  Future<String> decryptStringFromFile(String srcFilePath, {bool utf16 = false}) async {
-    Uint8List decData = await decryptDataFromFile(srcFilePath);
-    return utf16? decData.toUTF16StringBE() : utf8.decode(decData);
+  Future<String> decryptStringFromFile(String srcFilePath, {bool utf16 = false, Endian endian = Endian.big}) async {
+    Uint8List decData = await decryptDataFromFileSync(srcFilePath);
+    String srcString;
+    if ((decData[0] == 0xFE && decData[1] == 0xFF) || (decData[0] == 0xFF && decData[1] == 0xFE)) {
+      srcString = decData.toUtf16String();
+    } else if (decData[0] == 0xEF && decData[1] == 0xBB && decData[2] == 0xBF) {
+      srcString = decData.toUtf8String();
+    } else {
+      srcString = utf16? decData.toUtf16String(endian) : decData.toUtf8String();
+    }
+    return srcString;
   }
 
 

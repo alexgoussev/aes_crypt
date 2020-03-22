@@ -9,7 +9,7 @@ void main() {
   var random = Random();
 
   AesCrypt crypt = AesCrypt();
-  crypt.setPassword('passw 密碼 パスワード пароль كلمة السر');
+  crypt.setPassword('passw 密碼 パスワード пароль كلمة السر ꜩꝕ 𐌰𐍉 𝕬𝖃');
   crypt.setOverwriteMode(AesCryptOwMode.warn);
 
 
@@ -53,7 +53,7 @@ void main() {
     });
 
 
-    int srcDataLen = 100003;
+    int srcDataLen = 100016;
     var srcData = Uint8List.fromList(List<int>.generate(srcDataLen, (i) => random.nextInt(256)));
     String enc_filepath = './test/testfile2.txt.aes';
 
@@ -70,6 +70,58 @@ void main() {
       await File(enc_filepath).delete();
       expect(srcData.isEqual(decrypted_data), equals(true));
     });
+
+
+    String decString;
+    String srcString = 'hglakj 密碼 パスワード фбмгцз كلمة السر ꜩꝕ 𐌰𐍉 𝕬𝖃 aalkjhflaeiuwoefdnscvsmnskdjfhoweqirhowqefasdnl';
+    String encFilepath = './test/testfile2.txt.aes';
+
+    test('Encrypt/decrypt UTF8 string <=> file', () {
+      crypt.encryptStringToFileSync(srcString, encFilepath); // bom = false
+      decString = crypt.decryptStringFromFileSync(encFilepath);
+      File(encFilepath).delete();
+      expect(decString, equals(srcString));
+    });
+
+    test('Encrypt/decrypt UTF8 string with BOM <=> file', () {
+      crypt.encryptStringToFileSync(srcString, encFilepath, bom: true); // bom = true
+      decString = crypt.decryptStringFromFileSync(encFilepath);
+      File(encFilepath).delete();
+      expect(decString, equals(srcString));
+    });
+
+
+    test('Encrypt/decrypt UTF16 BE string <=> file', () {
+      crypt.encryptStringToFileSync(srcString, encFilepath, utf16: true); // bom = false, endian = Endian.big
+      decString = crypt.decryptStringFromFileSync(encFilepath, utf16: true);
+      File(encFilepath).delete();
+      expect(decString, equals(srcString));
+    });
+
+    test('Encrypt/decrypt UTF16 BE string with BOM <=> file', () {
+      crypt.encryptStringToFileSync(srcString, encFilepath, utf16: true, bom: true); // bom = true, endian = Endian.big
+      decString = crypt.decryptStringFromFileSync(encFilepath);
+      File(encFilepath).delete();
+      expect(decString, equals(srcString));
+    });
+
+    test('Encrypt/decrypt UTF16 LE string <=> file', () {
+      crypt.encryptStringToFileSync(srcString, encFilepath, utf16: true, endian: Endian.little); // bom = false, endian = Endian.little
+      decString = crypt.decryptStringFromFileSync(encFilepath, utf16: true, endian: Endian.little);
+      File(encFilepath).delete();
+      expect(decString, equals(srcString));
+    });
+
+    test('Encrypt/decrypt UTF16 LE string with BOM <=> file', () {
+      crypt.encryptStringToFileSync(srcString, encFilepath, utf16: true, endian: Endian.little, bom: true); // bom = true, endian = Endian.little
+      decString = crypt.decryptStringFromFileSync(encFilepath);
+      File(encFilepath).delete();
+      expect(decString, equals(srcString));
+    });
+
+//    test('', () {
+//      expect(true, equals(true));
+//    });
 
   });
 }

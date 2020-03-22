@@ -1,6 +1,6 @@
 part of aes_crypt;
 
-extension _Uint8ListExtension on Uint8List {
+extension Uint8ListExtension on Uint8List {
   bool get isNullOrEmpty => this == null || this.isEmpty;
 
   Uint8List addList(Uint8List other) {
@@ -22,15 +22,21 @@ extension _Uint8ListExtension on Uint8List {
     return false;
   }
 
-  /// Converts bytes to UTF-16 string (Big Endian order)
-  ///
-  /// From https://stackoverflow.com/questions/28565242/convert-uint8list-to-string-with-dart
-  String toUTF16StringBE() {
+  // Converts bytes to UTF-16 string
+  String toUtf16String([Endian endian = Endian.big]) {
     StringBuffer buffer = StringBuffer();
-    for (int i = 0; i < this.length;) {
-      int firstWord = (this[i] << 8) + this[i + 1];
+    int i = 0;
+    if (this[0] == 0xFE && this[1] == 0xFF) {
+      endian = Endian.big;
+      i += 2;
+    } else if (this[0] == 0xFF && this[1] == 0xFE) {
+      endian = Endian.little;
+      i += 2;
+    }
+    while (i < this.length) {
+      int firstWord = (endian == Endian.big)? (this[i] << 8) + this[i + 1] : (this[i+1] << 8) + this[i];
       if (0xD800 <= firstWord && firstWord <= 0xDBFF) {
-        int secondWord = (this[i + 2] << 8) + this[i + 3];
+        int secondWord = (endian == Endian.big)? (this[i + 2] << 8) + this[i + 3] : (this[i + 3] << 8) + this[i + 2];
         buffer.writeCharCode(((firstWord - 0xD800) << 10) + (secondWord - 0xDC00) + 0x10000);
         i += 4;
       }
@@ -39,8 +45,16 @@ extension _Uint8ListExtension on Uint8List {
         i += 2;
       }
     }
-
     return buffer.toString();
+  }
+
+  // Converts bytes to UTF-8 string
+  String toUtf8String() {
+    Uint8List data = this;
+    if (this[0] == 0xEF && this[1] == 0xBB && this[2] == 0xBF) {
+      data = this.buffer.asUint8List(3, this.length - 3); // skip BOM
+    }
+    return utf8.decode(data);
   }
 
   String toHexString() {
@@ -48,63 +62,55 @@ extension _Uint8ListExtension on Uint8List {
     this.forEach((item) { str.write(item.toRadixString(16).toUpperCase().padLeft(2, '0')); });
     return str.toString();
   }
-
   void fillByZero() => this.fillRange(0, this.length, 0);
 }
 
 
-extension _StringExtension on String {
-  /// Returns true if string is: null or empty
+extension StringExtension on String {
+  // Returns true if string is: null or empty
   bool get isNullOrEmpty => this == null || this.isEmpty;
 
-  /// Converts UTF-16 string to bytes (Big Endian order)
-  ///
-  /// From https://stackoverflow.com/questions/28565242/convert-uint8list-to-string-with-dart
-  /// https://unicode.org/faq/utf_bom.html#utf16-4
-  Uint8List toUTF16BytesBE() {
-    List<int> list = [];
-    this.runes.forEach((rune) {
-      if (rune >= 0x10000) {
-        rune -= 0x10000;
-        int firstWord = (rune >> 10) + 0xD800;
-        list.add(firstWord >> 8);
-        list.add(firstWord & 0xFF);
-        int secondWord = (rune & 0x3FF) + 0xDC00;
-        list.add(secondWord >> 8);
-        list.add(secondWord & 0xFF);
-      }
-      else {
-        list.add(rune >> 8);
-        list.add(rune & 0xFF);
-      }
-    });
-    return Uint8List.fromList(list);
-  }
-
-  /// Converts UTF-16 string to bytes (Low Endian order)
-  ///
-  /// https://stackoverflow.com/questions/28565242/convert-uint8list-to-string-with-dart
-  /// https://unicode.org/faq/utf_bom.html#utf16-4
-  Uint8List toUTF16BytesLE() {
-    List<int> list = [];
+  // Converts UTF-16 string to bytes
+  Uint8List toUtf16Bytes([Endian endian = Endian.big, bool bom = false]) {
+    List<int> list = bom? (endian == Endian.big? [0xFE, 0xFF]:[0xFF, 0xFE]) : [];
     this.runes.forEach((rune) {
       if (rune >= 0x10000) {
         int firstWord = (rune >> 10) + 0xD800 - (0x10000 >> 10);
         int secondWord = (rune & 0x3FF) + 0xDC00;
-        list.add(firstWord & 0xFF);
-        list.add(firstWord >> 8);
-        list.add(secondWord & 0xFF);
-        list.add(secondWord >> 8);
+        if (endian == Endian.big) {
+          list.add(firstWord >> 8);
+          list.add(firstWord & 0xFF);
+          list.add(secondWord >> 8);
+          list.add(secondWord & 0xFF);
+        } else {
+          list.add(firstWord & 0xFF);
+          list.add(firstWord >> 8);
+          list.add(secondWord & 0xFF);
+          list.add(secondWord >> 8);
+        }
       }
       else {
-        list.add(rune & 0xFF);
-        list.add(rune >> 8);
+        if (endian == Endian.big) {
+          list.add(rune >> 8);
+          list.add(rune & 0xFF);
+        } else {
+          list.add(rune & 0xFF);
+          list.add(rune >> 8);
+        }
       }
     });
     return Uint8List.fromList(list);
   }
 
-  List<int> toUTF8Bytes() {
+  // Converts string to UTF-8 bytes
+  List<int> toUtf8Bytes([bool bom = false]) {
+    if (bom) {
+      Uint8List data = utf8.encode(this);
+      Uint8List dataWithBom = Uint8List(data.length + 3)
+        ..setAll(0, [0xEF, 0xBB, 0xBF])
+        ..setRange(3, data.length + 3, data);
+      return dataWithBom;
+    }
     return utf8.encode(this);
   }
 }
