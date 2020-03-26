@@ -5,12 +5,13 @@
 aes_crypt is a library for Dart and Flutter developers
 that uses 256-bit AES algorithm to encrypt/decrypt files and binary data. 
 It is fully compatible with the 
-[AES Crypt file format](https://www.aescrypt.com/aes_file_format.html).
+[AES Crypt](https://www.aescrypt.com/) file format.
 It can be used to integrate AES Crypt functionality into your own Dart or Flutter applications.
+All algorithms are implemented in pure Dart and work in all platforms.
 
-This library writes and reads version 2 (latest) of the AES Crypt file specification. Backwards compatibility 
+aes_crypt writes and reads version 2 (latest) of the AES Crypt file specification. Backwards compatibility 
 with reading the version 1 is implemented but untested. 
-Output .aes files are fully compatible with any software using the AES Crypt standard file format.
+Output .aes files are fully compatible with any software using the AES Crypt standard file format. 
 This library is accompanied by clients and libraries for different operating systems
 and programming languages.
 For more information about AES Crypt and AES Crypt compatible 
@@ -54,16 +55,16 @@ crypt.setPassword('my cool password');
 
 Optionally you can set overwrite mode for the file write operations:
 ```dart
-// Overwrite the file if it exists.
+// Overwrites the file if it exists.
 crypt.setOverwriteMode(AesCryptOwMode.on);
 
-// If the file exists, thrown an exception 'AesCryptException' with the 'type' property
-// set as 'AesCryptExceptionType.destFileExists' (see example1.dart in 'example' folder).
-// It is default mode.
+// If the file exists, stops the operation and throws 'AesCryptException'
+// exception with 'AesCryptExceptionType.destFileExists' type (see 
+// example1.dart in 'example'  folder). This mode is set by default.
 crypt.setOverwriteMode(AesCryptOwMode.warn);
 
-// If the file exists, adds index '(1)' to its' name and tries to save. If such file also 
-// exists, adds '(2)' to its name, then '(3)', etc. 
+// If the file exists, adds index '(1)' to its' name and tries to save. 
+// If such file also exists, adds '(2)' to its name, then '(3)', etc. 
 crypt.setOverwriteMode(AesCryptOwMode.rename);
 ```
 
@@ -73,18 +74,22 @@ If you need asynchronous ones, please just remove 'Sync' from the end of functio
 
 File encryption/decryption:
 ```dart
-// Encrypts the file srcfile.txt and saves encrypted file under original name with '.aes'
-// extention added (srcfile.txt.aes). You can specify relative or direct path to it.
-// To save the file into current directory specify it either as './srcfile.txt' or as 'srcfile.txt'.
+// Encrypts the file srcfile.txt and saves encrypted file under original name 
+// with '.aes' extention added (srcfile.txt.aes). You can specify relative or 
+// direct path to it. To save the file into current directory specify it 
+// either as './srcfile.txt' or as 'srcfile.txt'.
 crypt.encryptFileSync('srcfile.txt');
 
-// Encrypts the file srcfile.txt and saves encrypted file under the name enc_file.txt.aes
+// Encrypts the file srcfile.txt and saves encrypted file under 
+// the name enc_file.txt.aes
 crypt.encryptFileSync('srcfile.txt', 'enc_file.txt.aes');
 
-// Decrypts the file srcfile.txt.aes and saves decrypted file under the name srcfile.txt
+// Decrypts the file srcfile.txt.aes and saves decrypted file under 
+// the name srcfile.txt
 crypt.decryptFileSync('srcfile.txt.aes');
 
-// Decrypts the file srcfile.txt.aes and saves decrypted file under the name dec_file.txt
+// Decrypts the file srcfile.txt.aes and saves decrypted file under 
+// the name dec_file.txt
 crypt.decryptFileSync('srcfile.txt.aes', 'dec_file.txt');
 ```
 
@@ -97,12 +102,14 @@ String srcString = 'some string';
 
 // Encrypts the string as UTF8 string and saves it into 'mytext.txt.aes' file.
 crypt.encryptStringToFileSync(srcString, 'mytext.txt.aes');
-// Encrypts the string as UTF16 Big Endian string and saves it into 'mytext.txt.aes' file.
+// Encrypts the string as UTF16 Big Endian string and saves it 
+// into 'mytext.txt.aes' file.
 crypt.encryptStringToFileSync(srcString, 'mytext.txt.aes', utf16: true);
-// Encrypts the string as UTF16 Little Endian string and saves it into 'mytext.txt.aes' file.
+// Encrypts the string as UTF16 Little Endian string and saves it 
+// into 'mytext.txt.aes' file.
 crypt.encryptStringToFileSync(srcString, 'mytext.txt.aes', utf16: true, endian: Endian.little);
-// Add 'bom: true' as an argument if you want to add byte order mark at the beginning of the string
-// before the encryption. For example:
+// Add 'bom: true' as an argument if you want to add byte order mark 
+// at the beginning of the string before the encryption. For example:
 // crypt.encryptStringToFileSync(srcString, 'mytext.txt.aes', bom: true);
 
 // Decrypts the file and interprets it based on byte order mark if it has one.
@@ -132,12 +139,13 @@ Uint8List decryptedData = crypt.decryptDataFromFileSync('mydata.bin.aes');
 Binary data AES encryption/decryption:
 ```dart
 // The encryption key. It should be 128, 192 or 256 bits long.
-Uint8List key = Uint8List.fromList([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]); // 128 bits
+Uint8List key = Uint8List.fromList([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]);
 
-// The initialization vector used in advanced cipher modes. It must be 128 bits long.
+// The initialization vector used in advanced cipher modes. 
+// It must be 128 bits long.
 Uint8List iv = Uint8List.fromList([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]);
 
-// The block cipher mode of operation. It can be one of the next values:
+// AES mode of operation. It can be one of the next values:
 //    AesMode.ecb - ECB (Electronic Code Book)
 //    AesMode.cbc - CBC (Cipher Block Chaining)
 //    AesMode.cfb - CFB (Cipher Feedback)
@@ -182,14 +190,15 @@ Uint8List hmac = crypt.hmacSha256(key, srcData);
 
 - reducing the memory usage for large file processing
 - asynchronous encrypting/decrypting
-- support streams
+- support for streams
 - support for key files
 
 ## Support
 
 Please file feature requests and bugs at the [issue tracker](https://github.com/alexgoussev/aes_crypt/issues)
 
-I would be grateful if you help me to correct grammar and syntactical errors in this readme.  
+I would be grateful if you help me to correct grammar and syntactical errors 
+for this readme and library documentation.  
 
 
 ## Acknowledgments
