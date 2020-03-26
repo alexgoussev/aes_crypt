@@ -1,14 +1,38 @@
 part of aes_crypt;
 
-enum AesCryptOwMode { warn, rename, on }
-enum AesCryptExceptionType { destFileExists }
-enum AesMode { ecb, cbc, cfb, ofb }
+/// Enum that specifies the overwrite mode for write file operations
+/// during encryption or decryption process.
+enum AesCryptOwMode {
+  /// If the file exists, stops the operation and throws [AesCryptException]
+  /// exception with [AesCryptExceptionType.destFileExists] type.
+  /// This mode is set by default.
+  warn,
+  /// If the file exists, adds index '(1)' to its' name and tries to save.
+  /// If such file also exists, adds '(2)' to its name, then '(3)', etc.
+  rename,
+  /// Overwrites the file if it exists.
+  on,
+}
+
+/// Enum that specifies the mode of operation of the AES algorithm.
+enum AesMode {
+  /// ECB (Electronic Code Book)
+  ecb,
+  /// CBC (Cipher Block Chaining)
+  cbc,
+  /// CFB (Cipher Feedback)
+  cfb,
+  /// OFB (Output Feedback)
+  ofb,
+}
 
 enum _Action { encrypting, decripting }
 enum _Data { head, userdata, iv1, key1, iv2, key2, enckeys, hmac1, encdata, fsmod, hmac2 }
 enum _HmacType { HMAC, HMAC1, HMAC2 }
 extension _HmacTypeExtension on _HmacType { String get name => this.toString().replaceFirst(this.runtimeType.toString() + '.', ''); }
 
+
+/// Wraps encryption and decryption methods and algorithms.
 class AesCrypt {
   static const bool _debug = false;
   static const String _encFileExt = '.aes';
@@ -22,6 +46,10 @@ class AesCrypt {
   Map<String, List<int>> _userdata;
   final Map<_Data, Uint8List> _dp = {}; // encrypted file data parts
 
+
+  /// Creates the library wrapper.
+  ///
+  /// Optionally sets encryption/decryption password as [password].
   AesCrypt([String password = '']) {
     _password = password;
     _passBytes = password.toUtf16Bytes(Endian.little);
@@ -34,22 +62,41 @@ class AesCrypt {
     _aesKey = Uint8List(0);
   }
 
-  /// Set password for encryption/decryption.
+
+  /// Sets encryption/decryption password.
   void setPassword(String password) {
-    AesCryptArgumentError.checkNotNullOrEmpty(password, 'Empty password.');
+    AesCryptArgumentError.checkNullOrEmpty(password, 'Empty password.');
     _password = password;
     _passBytes = password.toUtf16Bytes(Endian.little);
   }
 
-  /// Set the mode for existing file overwriting
+
+  /// Sets overwrite mode [mode] for write file operations during encryption
+  /// or decryption process.
+  ///
+  /// Available modes:
+  ///
+  /// [AesCryptOwMode.warn] - If the file exists, stops the operation and
+  /// throws [AesCryptException] exception with
+  /// [AesCryptExceptionType.destFileExists] type. This mode is set by default.
+  ///
+  /// [AesCryptOwMode.rename] - If the file exists, adds index '(1)' to its' name
+  /// and tries to save. If such file also exists, adds '(2)' to its name, then '(3)', etc.
+  ///
+  /// [AesCryptOwMode.on] - Overwrite the file if it exists.
   void setOverwriteMode(AesCryptOwMode mode) => _owMode = mode;
 
-  /// Set standard extension tags used in the AES file format.
+
+  /// Sets standard extension tags used in the AES Crypt file format.
+  ///
+  /// Extension tags available:
   ///
   /// [createdBy] is a developer-defined text string that identifies the software
   /// product, manufacturer, or other useful information (such as software version).
+  ///
   /// [createdOn] indicates the date that the file was created.
   /// The format of the date string is YYYY-MM-DD.
+  ///
   /// [createdAt] indicates the time that the file was created. The format of the date string
   /// is in 24-hour format like HH:MM:SS (e.g, 21:15:04). The time zone is UTC.
   void setUserData({String createdBy = 'Dart aes_crypt library', String createdOn = '', String createdAt =''}) {
@@ -79,6 +126,9 @@ class AesCrypt {
   }
 
 
+  /// Encrypts binary data [srcData] and saves it into [destFilePath] file synchronously.
+  ///
+  /// Returns [String] object containing the path to encrypted file.
   String encryptDataToFileSync(Uint8List srcData, String destFilePath) {
     destFilePath = destFilePath.trim();
 
@@ -126,12 +176,28 @@ class AesCrypt {
   }
 
 
-  String encryptStringToFileSync(String srcString, String destFilePath, {bool utf16 = false, bool bom = false, Endian endian = Endian.big}) {
+  /// Encrypts the string [srcString] and saves it into [destFilePath] file synchronously.
+  ///
+  /// By default the string will be converted to a list of UTF-8 bytes before
+  /// it is encrypted.
+  ///
+  /// If the argument [utf16] is set to [true], the string will be converted
+  /// to a list of UTF-16 bytes. Endianness depends on [endian] argument.
+  ///
+  /// If the argument [bom] is set to [true], BOM (Byte Order Mark) is appended
+  /// to the string before it is encrypted.
+  ///
+  /// Returns [String] object containing the path to encrypted file.
+  String encryptStringToFileSync(String srcString, String destFilePath, {bool utf16 = false, Endian endian = Endian.big, bool bom = false}) {
     Uint8List bytes = utf16? srcString.toUtf16Bytes(endian, bom) : srcString.toUtf8Bytes(bom);
     return encryptDataToFileSync(bytes, destFilePath);
   }
 
 
+  /// Encrypts binary data [srcData] and saves it into [destFilePath] file asynchronously.
+  ///
+  /// Returns [Future<String>] that completes with the path to encrypted file
+  /// once the entire operation has completed.
   Future<String> encryptDataToFile(Uint8List srcData, String destFilePath) async {
     destFilePath = destFilePath.trim();
 
@@ -179,12 +245,33 @@ class AesCrypt {
   }
 
 
-  Future<String> encryptStringToFile(String srcString, String destFilePath, {bool utf16 = false, bool bom = false, Endian endian = Endian.big}) async {
+  /// Encrypts the string [srcString] and saves it into [destFilePath] file asynchronously.
+  ///
+  /// By default the string will be converted to a list of UTF-8 bytes before
+  /// it is encrypted.
+  ///
+  /// If the argument [utf16] is set to [true], the string will be converted
+  /// to a list of UTF-16 bytes. Endianness depends on [endian] argument.
+  ///
+  /// If the argument [bom] is set to [true], BOM (Byte Order Mark) is appended
+  /// to the string before it is encrypted.
+  ///
+  /// Returns [Future<String>] that completes with the path to encrypted file
+  /// once the entire operation has completed.
+  Future<String> encryptStringToFile(String srcString, String destFilePath, {bool utf16 = false, Endian endian = Endian.big, bool bom = false}) async {
     Uint8List bytes = utf16? srcString.toUtf16Bytes(endian, bom) : srcString.toUtf8Bytes(bom);
     return await encryptDataToFile(bytes, destFilePath);
   }
 
 
+  /// Encrypts [srcFilePath] file and saves it into [destFilePath] file synchronously.
+  ///
+  /// If the argument [destFilePath] is not specified, encrypted file name is created
+  /// as a concatenation of [srcFilePath] and '.aes' file extension.
+  ///
+  /// If encrypted file exists, the behaviour depends on [AesCryptOwMode].
+  ///
+  /// Returns [String] object containing the path to encrypted file.
   String encryptFileSync(String srcFilePath, [String destFilePath = '']) {
     srcFilePath = srcFilePath.trim();
     destFilePath = destFilePath.trim();
@@ -261,6 +348,15 @@ class AesCrypt {
   }
 
 
+  /// Encrypts [srcFilePath] file and saves it into [destFilePath] file asynchronously.
+  ///
+  /// If the argument [destFilePath] is not specified, encrypted file name is created
+  /// as a concatenation of [srcFilePath] and '.aes' file extension.
+  ///
+  /// If encrypted file exists, the behaviour depends on [AesCryptOwMode].
+  ///
+  /// Returns [Future<String>] that completes with the path to encrypted file
+  /// once the entire operation has completed.
   Future<String> encryptFile(String srcFilePath, [String destFilePath = '']) async {
     srcFilePath = srcFilePath.trim();
     destFilePath = destFilePath.trim();
@@ -335,6 +431,9 @@ class AesCrypt {
   }
 
 
+  /// Reads synchronously and decrypts binary data from [srcFilePath] file.
+  ///
+  /// Returns [Uint8List] object containing decrypted data.
   Uint8List decryptDataFromFileSync(String srcFilePath) {
     srcFilePath = srcFilePath.trim();
 
@@ -384,6 +483,17 @@ class AesCrypt {
   }
 
 
+  /// Reads synchronously and decrypts a string from [srcFilePath] file.
+  ///
+  /// If BOM (Byte Order Mark) is present in decrypted data, interprets the data
+  /// in accordance with BOM. Otherwise the interpretation will depend on [utf16]
+  /// and [endian] arguments.
+  ///
+  /// If the argument [utf16] is set to [true], decrypted data will be interpreted
+  /// as a list of UTF-16 bytes. Endianness depends on [endian] argument.
+  /// Otherwise the data will be interpreted as a list of UTF-8 bytes.
+  ///
+  /// Returns [String] object containing decrypted string.
   String decryptStringFromFileSync(String srcFilePath, {bool utf16 = false, Endian endian = Endian.big}) {
     Uint8List decData = decryptDataFromFileSync(srcFilePath);
     String srcString;
@@ -398,6 +508,10 @@ class AesCrypt {
   }
 
 
+  /// Reads asynchronously and decrypts binary data from [srcFilePath] file.
+  ///
+  /// Returns [Future<Uint8List>] that completes with decrypted data
+  /// once the entire operation has completed.
   Future<Uint8List> decryptDataFromFile(String srcFilePath) async {
     srcFilePath = srcFilePath.trim();
 
@@ -448,6 +562,18 @@ class AesCrypt {
   }
 
 
+  /// Reads asynchronously and decrypts a text from [srcFilePath] file.
+  ///
+  /// If BOM (Byte Order Mark) is present in decrypted data, interprets the data
+  /// in accordance with BOM. Otherwise the interpretation will depend on [utf16]
+  /// and [endian] arguments.
+  ///
+  /// If the argument [utf16] is set to [true], decrypted data will be interpreted
+  /// as a list of UTF-16 bytes. Endianness depends on [endian] argument.
+  /// Otherwise the data will be interpreted as a list of UTF-8 bytes.
+  ///
+  /// Returns [Future<String>] that completes with decrypted text
+  /// once the entire operation has completed.
   Future<String> decryptStringFromFile(String srcFilePath, {bool utf16 = false, Endian endian = Endian.big}) async {
     Uint8List decData = await decryptDataFromFileSync(srcFilePath);
     String srcString;
@@ -462,6 +588,16 @@ class AesCrypt {
   }
 
 
+  /// Decrypts [srcFilePath] file and saves it into [destFilePath] file synchronously.
+  ///
+  /// If the argument [destFilePath] is not specified, decrypted file name is created
+  /// by removing '.aes' file extension from [srcFilePath].
+  /// If it has no '.aes' extension, then decrypted file name is created by adding
+  /// '.decrypted' file extension to [srcFilePath].
+  ///
+  /// If decrypted file exists, the behaviour depends on [AesCryptOwMode].
+  ///
+  /// Returns [String] object containing the path to decrypted file.
   String decryptFileSync(String srcFilePath, [String destFilePath = '']) {
     srcFilePath = srcFilePath.trim();
     destFilePath = destFilePath.trim();
@@ -531,6 +667,17 @@ class AesCrypt {
   }
 
 
+  /// Decrypts [srcFilePath] file and saves it into [destFilePath] file asynchronously.
+  ///
+  /// If the argument [destFilePath] is not specified, decrypted file name is created
+  /// by removing '.aes' file extension from [srcFilePath].
+  /// If it has no '.aes' extension, then decrypted file name is created by adding
+  /// '.decrypted' file extension to [srcFilePath].
+  ///
+  /// If decrypted file exists, the behaviour depends on [AesCryptOwMode].
+  ///
+  /// Returns [Future<String>] that completes with the path to decrypted file
+  /// once the entire operation has completed.
   Future<String> decryptFile(String srcFilePath, [String destFilePath = '']) async {
     srcFilePath = srcFilePath.trim();
     destFilePath = destFilePath.trim();
@@ -604,10 +751,16 @@ class AesCrypt {
 //**************************** CRYPTO FUNCTIONS ******************************
 //****************************************************************************
 
+  /// Creates random encryption key of [length] bytes long.
+  ///
+  /// Returns [Uint8List] object containing created key.
   Uint8List createKey([int length = 32]) {
     return Uint8List.fromList(List<int>.generate(length, (i) => _secureRandom.nextInt(256)));
   }
 
+  /// Creates random initialization vector.
+  ///
+  /// Returns [Uint8List] object containing created initialization vector.
   Uint8List createIV() {
     return createKey(16);
   }
@@ -692,9 +845,11 @@ class AesCrypt {
 //****************************    HMAC-SHA256   ******************************
 //****************************************************************************
 
-  /// Computes the HMAC-SHA256.
+  /// Computes HMAC-SHA256 code for binary data [data] using cryptographic key [key].
+  ///
+  /// Returns [Uint8List] object containing computed code.
   Uint8List hmacSha256(Uint8List key, Uint8List data) {
-    AesCryptArgumentError.checkNotNullOrEmpty(key, 'Empty key.');
+    AesCryptArgumentError.checkNullOrEmpty(key, 'Empty key.');
 
     final Int32x4 magic_i = Int32x4(0x36363636, 0x36363636, 0x36363636, 0x36363636);
     final Int32x4 magic_o = Int32x4(0x5C5C5C5C, 0x5C5C5C5C, 0x5C5C5C5C, 0x5C5C5C5C);
@@ -742,16 +897,18 @@ class AesCrypt {
 
   final Uint32List _chunkBuff = Uint32List(64);
   int _h0; int _h1; int _h2; int _h3; int _h4; int _h5; int _h6; int _h7;
-  int a; int b; int c; int d; int e; int f; int g; int h;
-  int s0; int s1;
+  int _a; int _b; int _c; int _d; int _e; int _f; int _g; int _h;
+  int _s0; int _s1;
 
-  /// Computes SHA256.
+
+  /// Computes SHA256 hash for binary data [data].
   ///
-  /// https://en.wikipedia.org/wiki/SHA-2#Pseudocode
+  /// Returns [Uint8List] object containing computed hash.
   Uint8List sha256(Uint8List data) => _sha256(data);
 
+
   Uint8List _sha256(Uint8List data, [Uint8List hmacIpad]) {
-    AesCryptArgumentError.checkNotNullOrEmpty(data, 'Empty data.');
+    AesCryptArgumentError.checkNullOrEmpty(data, 'Empty data.');
 
     ByteData chunk;
 
@@ -813,7 +970,7 @@ class AesCrypt {
       _s0 = _rotr(_chunkBuff[i - 15], 7) ^ _rotr(_chunkBuff[i - 15], 18) ^ (_chunkBuff[i - 15] >> 3);
       _s1 = _rotr(_chunkBuff[i - 2], 17) ^ _rotr(_chunkBuff[i - 2], 19) ^ (_chunkBuff[i - 2] >> 10);
       // _chunkBuff is Uint32List and because of that it does'n need in '& _mask32' at the end
-      _chunkBuff[i] = _chunkBuff[i - 16] + s0 + _chunkBuff[i - 7] + s1;
+      _chunkBuff[i] = _chunkBuff[i - 16] + _s0 + _chunkBuff[i - 7] + _s1;
     }
 
     _a = _h0; _b = _h1; _c = _h2; _d = _h3; _e = _h4; _f = _h5; _g = _h6; _h = _h7;
@@ -1075,7 +1232,7 @@ class AesCrypt {
   Uint8List _aesIV;
 
 
-  /// Set AES encryption key and the initialization vector.
+  /// Sets AES encryption key [key] and the initialization vector [iv].
   void aesSetKeys(Uint8List key, [Uint8List iv]) {
     if (![16, 24, 32].contains(key.length)) {
       throw AesCryptArgumentError('Invalid key length for AES. Provided ${key.length * 8} bits, expected 128, 192 or 256 bits.');
@@ -1096,7 +1253,13 @@ class AesCrypt {
   }
 
 
-  /// Set AES mode.
+  /// Sets AES mode of operation as [mode].
+  ///
+  /// Available modes:
+  /// - [AesMode.ecb] - ECB (Electronic Code Book)
+  /// - [AesMode.cbc] - CBC (Cipher Block Chaining)
+  /// - [AesMode.cfb] - CFB (Cipher Feedback)
+  /// - [AesMode.ofb] - OFB (Output Feedback)
   void aesSetMode(AesMode mode) {
     if (_aesMode == AesMode.ecb && _aesMode != mode && _aesIV.isNullOrEmpty) {
       throw AesCryptArgumentError('Failed to change AES mode. The initialization vector is not set. When changing the mode from ECB to another one, set IV at first.');
@@ -1105,14 +1268,16 @@ class AesCrypt {
   }
 
 
-  /// Set AES encryption key, the initialization vector and mode.
+  /// Sets AES encryption key [key], the initialization vector [iv] and AES mode [mode].
   void aesSetParams(Uint8List key, Uint8List iv, AesMode mode) {
     aesSetKeys(key, iv);
     aesSetMode(mode);
   }
 
 
-  /// Encrypts data
+  /// Encrypts binary data [data] with AES algorithm.
+  ///
+  /// Returns [Uint8List] object containing encrypted data.
   Uint8List aesEncrypt(Uint8List data) {
     AesCryptArgumentError.checkNullOrEmpty(_aesKey, 'AES encryption key is empty.');
     if (_aesMode != AesMode.ecb && _aesIV.isEmpty) {
@@ -1175,7 +1340,9 @@ class AesCrypt {
     return encData;
   }
 
-  /// Decrypts data
+  /// Decrypts binary data [data] encrypted with AES algorithm.
+  ///
+  /// Returns [Uint8List] object containing decrypted data.
   Uint8List aesDecrypt(Uint8List data) {
     AesCryptArgumentError.checkNullOrEmpty(_aesKey, 'AES encryption key is empty.');
     if (_aesMode != AesMode.ecb && _aesIV.isEmpty) {
