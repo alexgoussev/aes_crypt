@@ -93,34 +93,34 @@ crypt.decryptFileSync('srcfile.txt.aes');
 crypt.decryptFileSync('srcfile.txt.aes', 'dec_file.txt');
 ```
 
-String <=> file encryption/decryption:
+Text <=> file encryption/decryption:
 ```dart
-String decryptedString;
+String decryptedText;
 
-// String to be encrypted
-String srcString = 'some string';
+// Plain text to be encrypted
+String srcText = 'some text';
 
-// Encrypts the string as UTF8 string and saves it into 'mytext.txt.aes' file.
-crypt.encryptStringToFileSync(srcString, 'mytext.txt.aes');
-// Encrypts the string as UTF16 Big Endian string and saves it 
+// Encrypts the text as UTF8 string and saves it into 'mytext.txt.aes' file.
+crypt.encryptTextToFileSync(srcText, 'mytext.txt.aes');
+// Encrypts the text as UTF16 Big Endian string and saves it 
 // into 'mytext.txt.aes' file.
-crypt.encryptStringToFileSync(srcString, 'mytext.txt.aes', utf16: true);
-// Encrypts the string as UTF16 Little Endian string and saves it 
+crypt.encryptTextToFileSync(srcText, 'mytext.txt.aes', utf16: true);
+// Encrypts the text as UTF16 Little Endian string and saves it 
 // into 'mytext.txt.aes' file.
-crypt.encryptStringToFileSync(srcString, 'mytext.txt.aes', utf16: true, endian: Endian.little);
+crypt.encryptTextToFileSync(srcText, 'mytext.txt.aes', utf16: true, endian: Endian.little);
 // Add 'bom: true' as an argument if you want to add byte order mark 
-// at the beginning of the string before the encryption. For example:
-// crypt.encryptStringToFileSync(srcString, 'mytext.txt.aes', bom: true);
+// at the beginning of the text string before the encryption. For example:
+// crypt.encryptTextToFileSync(srcText, 'mytext.txt.aes', bom: true);
 
 // Decrypts the file and interprets it based on byte order mark if it has one.
 // Otherwise it will be interpreted as UTF8 text.
-decryptedString = crypt.decryptStringFromFileSync('mytext.txt.aes');
+decryptedString = crypt.decryptTextFromFileSync('mytext.txt.aes');
 // Decrypts the file and interprets it based on byte order mark if it has one.
 // Otherwise it will be interpreted as UTF16 Big Endian text.
-decryptedString = crypt.decryptStringFromFileSync('mytext.txt.aes', utf16: true);
+decryptedString = crypt.decryptTextFromFileSync('mytext.txt.aes', utf16: true);
 // Decrypts the file and interprets it based on byte order mark if it has one.
 // Otherwise it will be interpreted as UTF16 Little Endian text.
-decryptedString = crypt.decryptStringFromFileSync('mytext.txt.aes', utf16: true, endian: Endian.little);
+decryptedString = crypt.decryptTextFromFileSync('mytext.txt.aes', utf16: true, endian: Endian.little);
 
 ```
 

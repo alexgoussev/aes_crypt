@@ -118,44 +118,44 @@ void main() {
     String encFilepath = './test/testfile2.txt.aes';
 
     test('Encrypt/decrypt UTF8 string <=> file', () {
-      crypt.encryptStringToFileSync(srcString, encFilepath); // bom = false
-      decString = crypt.decryptStringFromFileSync(encFilepath);
+      crypt.encryptTextToFileSync(srcString, encFilepath); // bom = false
+      decString = crypt.decryptTextFromFileSync(encFilepath);
       File(encFilepath).delete();
       expect(decString, equals(srcString));
     });
 
     test('Encrypt/decrypt UTF8 string with BOM <=> file', () {
-      crypt.encryptStringToFileSync(srcString, encFilepath, bom: true); // bom = true
-      decString = crypt.decryptStringFromFileSync(encFilepath);
+      crypt.encryptTextToFileSync(srcString, encFilepath, bom: true); // bom = true
+      decString = crypt.decryptTextFromFileSync(encFilepath);
       File(encFilepath).delete();
       expect(decString, equals(srcString));
     });
 
 
     test('Encrypt/decrypt UTF16 BE string <=> file', () {
-      crypt.encryptStringToFileSync(srcString, encFilepath, utf16: true); // bom = false, endian = Endian.big
-      decString = crypt.decryptStringFromFileSync(encFilepath, utf16: true);
+      crypt.encryptTextToFileSync(srcString, encFilepath, utf16: true); // bom = false, endian = Endian.big
+      decString = crypt.decryptTextFromFileSync(encFilepath, utf16: true);
       File(encFilepath).delete();
       expect(decString, equals(srcString));
     });
 
     test('Encrypt/decrypt UTF16 BE string with BOM <=> file', () {
-      crypt.encryptStringToFileSync(srcString, encFilepath, utf16: true, bom: true); // bom = true, endian = Endian.big
-      decString = crypt.decryptStringFromFileSync(encFilepath);
+      crypt.encryptTextToFileSync(srcString, encFilepath, utf16: true, bom: true); // bom = true, endian = Endian.big
+      decString = crypt.decryptTextFromFileSync(encFilepath);
       File(encFilepath).delete();
       expect(decString, equals(srcString));
     });
 
     test('Encrypt/decrypt UTF16 LE string <=> file', () {
-      crypt.encryptStringToFileSync(srcString, encFilepath, utf16: true, endian: Endian.little); // bom = false, endian = Endian.little
-      decString = crypt.decryptStringFromFileSync(encFilepath, utf16: true, endian: Endian.little);
+      crypt.encryptTextToFileSync(srcString, encFilepath, utf16: true, endian: Endian.little); // bom = false, endian = Endian.little
+      decString = crypt.decryptTextFromFileSync(encFilepath, utf16: true, endian: Endian.little);
       File(encFilepath).delete();
       expect(decString, equals(srcString));
     });
 
     test('Encrypt/decrypt UTF16 LE string with BOM <=> file', () {
-      crypt.encryptStringToFileSync(srcString, encFilepath, utf16: true, endian: Endian.little, bom: true); // bom = true, endian = Endian.little
-      decString = crypt.decryptStringFromFileSync(encFilepath);
+      crypt.encryptTextToFileSync(srcString, encFilepath, utf16: true, endian: Endian.little, bom: true); // bom = true, endian = Endian.little
+      decString = crypt.decryptTextFromFileSync(encFilepath);
       File(encFilepath).delete();
       expect(decString, equals(srcString));
     });

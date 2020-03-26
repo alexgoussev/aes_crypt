@@ -126,7 +126,7 @@ class AesCrypt {
   }
 
 
-  /// Encrypts binary data [srcData] and saves it into [destFilePath] file synchronously.
+  /// Encrypts binary data [srcData] to [destFilePath] file synchronously.
   ///
   /// Returns [String] object containing the path to encrypted file.
   String encryptDataToFileSync(Uint8List srcData, String destFilePath) {
@@ -176,25 +176,25 @@ class AesCrypt {
   }
 
 
-  /// Encrypts the string [srcString] and saves it into [destFilePath] file synchronously.
+  /// Encrypts a plain text string [srcString] to [destFilePath] file synchronously.
   ///
-  /// By default the string will be converted to a list of UTF-8 bytes before
+  /// By default the text string will be converted to a list of UTF-8 bytes before
   /// it is encrypted.
   ///
-  /// If the argument [utf16] is set to [true], the string will be converted
+  /// If the argument [utf16] is set to [true], the text string will be converted
   /// to a list of UTF-16 bytes. Endianness depends on [endian] argument.
   ///
   /// If the argument [bom] is set to [true], BOM (Byte Order Mark) is appended
-  /// to the string before it is encrypted.
+  /// to the beginning of the text string before it is encrypted.
   ///
   /// Returns [String] object containing the path to encrypted file.
-  String encryptStringToFileSync(String srcString, String destFilePath, {bool utf16 = false, Endian endian = Endian.big, bool bom = false}) {
+  String encryptTextToFileSync(String srcString, String destFilePath, {bool utf16 = false, Endian endian = Endian.big, bool bom = false}) {
     Uint8List bytes = utf16? srcString.toUtf16Bytes(endian, bom) : srcString.toUtf8Bytes(bom);
     return encryptDataToFileSync(bytes, destFilePath);
   }
 
 
-  /// Encrypts binary data [srcData] and saves it into [destFilePath] file asynchronously.
+  /// Encrypts binary data [srcData] to [destFilePath] file asynchronously.
   ///
   /// Returns [Future<String>] that completes with the path to encrypted file
   /// once the entire operation has completed.
@@ -245,26 +245,26 @@ class AesCrypt {
   }
 
 
-  /// Encrypts the string [srcString] and saves it into [destFilePath] file asynchronously.
+  /// Encrypts a plain text string [srcString] to [destFilePath] file asynchronously.
   ///
-  /// By default the string will be converted to a list of UTF-8 bytes before
+  /// By default the text string will be converted to a list of UTF-8 bytes before
   /// it is encrypted.
   ///
-  /// If the argument [utf16] is set to [true], the string will be converted
+  /// If the argument [utf16] is set to [true], the text string will be converted
   /// to a list of UTF-16 bytes. Endianness depends on [endian] argument.
   ///
   /// If the argument [bom] is set to [true], BOM (Byte Order Mark) is appended
-  /// to the string before it is encrypted.
+  /// to the beginning of the string before it is encrypted.
   ///
   /// Returns [Future<String>] that completes with the path to encrypted file
   /// once the entire operation has completed.
-  Future<String> encryptStringToFile(String srcString, String destFilePath, {bool utf16 = false, Endian endian = Endian.big, bool bom = false}) async {
+  Future<String> encryptTextToFile(String srcString, String destFilePath, {bool utf16 = false, Endian endian = Endian.big, bool bom = false}) async {
     Uint8List bytes = utf16? srcString.toUtf16Bytes(endian, bom) : srcString.toUtf8Bytes(bom);
     return await encryptDataToFile(bytes, destFilePath);
   }
 
 
-  /// Encrypts [srcFilePath] file and saves it into [destFilePath] file synchronously.
+  /// Encrypts [srcFilePath] file to [destFilePath] file synchronously.
   ///
   /// If the argument [destFilePath] is not specified, encrypted file name is created
   /// as a concatenation of [srcFilePath] and '.aes' file extension.
@@ -348,7 +348,7 @@ class AesCrypt {
   }
 
 
-  /// Encrypts [srcFilePath] file and saves it into [destFilePath] file asynchronously.
+  /// Encrypts [srcFilePath] file to [destFilePath] file asynchronously.
   ///
   /// If the argument [destFilePath] is not specified, encrypted file name is created
   /// as a concatenation of [srcFilePath] and '.aes' file extension.
@@ -431,7 +431,7 @@ class AesCrypt {
   }
 
 
-  /// Reads synchronously and decrypts binary data from [srcFilePath] file.
+  /// Decrypts binary data from [srcFilePath] file synchronously.
   ///
   /// Returns [Uint8List] object containing decrypted data.
   Uint8List decryptDataFromFileSync(String srcFilePath) {
@@ -483,7 +483,7 @@ class AesCrypt {
   }
 
 
-  /// Reads synchronously and decrypts a string from [srcFilePath] file.
+  /// Decrypts a plain text from [srcFilePath] file synchronously.
   ///
   /// If BOM (Byte Order Mark) is present in decrypted data, interprets the data
   /// in accordance with BOM. Otherwise the interpretation will depend on [utf16]
@@ -493,8 +493,8 @@ class AesCrypt {
   /// as a list of UTF-16 bytes. Endianness depends on [endian] argument.
   /// Otherwise the data will be interpreted as a list of UTF-8 bytes.
   ///
-  /// Returns [String] object containing decrypted string.
-  String decryptStringFromFileSync(String srcFilePath, {bool utf16 = false, Endian endian = Endian.big}) {
+  /// Returns [String] object containing decrypted text.
+  String decryptTextFromFileSync(String srcFilePath, {bool utf16 = false, Endian endian = Endian.big}) {
     Uint8List decData = decryptDataFromFileSync(srcFilePath);
     String srcString;
     if ((decData[0] == 0xFE && decData[1] == 0xFF) || (decData[0] == 0xFF && decData[1] == 0xFE)) {
@@ -508,7 +508,7 @@ class AesCrypt {
   }
 
 
-  /// Reads asynchronously and decrypts binary data from [srcFilePath] file.
+  /// Decrypts binary data from [srcFilePath] file asynchronously.
   ///
   /// Returns [Future<Uint8List>] that completes with decrypted data
   /// once the entire operation has completed.
@@ -562,7 +562,7 @@ class AesCrypt {
   }
 
 
-  /// Reads asynchronously and decrypts a text from [srcFilePath] file.
+  /// Decrypts a plain text from [srcFilePath] file asynchronously.
   ///
   /// If BOM (Byte Order Mark) is present in decrypted data, interprets the data
   /// in accordance with BOM. Otherwise the interpretation will depend on [utf16]
@@ -574,7 +574,7 @@ class AesCrypt {
   ///
   /// Returns [Future<String>] that completes with decrypted text
   /// once the entire operation has completed.
-  Future<String> decryptStringFromFile(String srcFilePath, {bool utf16 = false, Endian endian = Endian.big}) async {
+  Future<String> decryptTextFromFile(String srcFilePath, {bool utf16 = false, Endian endian = Endian.big}) async {
     Uint8List decData = await decryptDataFromFileSync(srcFilePath);
     String srcString;
     if ((decData[0] == 0xFE && decData[1] == 0xFF) || (decData[0] == 0xFF && decData[1] == 0xFE)) {
@@ -588,7 +588,7 @@ class AesCrypt {
   }
 
 
-  /// Decrypts [srcFilePath] file and saves it into [destFilePath] file synchronously.
+  /// Decrypts [srcFilePath] file to [destFilePath] file synchronously.
   ///
   /// If the argument [destFilePath] is not specified, decrypted file name is created
   /// by removing '.aes' file extension from [srcFilePath].
@@ -667,7 +667,7 @@ class AesCrypt {
   }
 
 
-  /// Decrypts [srcFilePath] file and saves it into [destFilePath] file asynchronously.
+  /// Decrypts [srcFilePath] file to [destFilePath] file asynchronously.
   ///
   /// If the argument [destFilePath] is not specified, decrypted file name is created
   /// by removing '.aes' file extension from [srcFilePath].
