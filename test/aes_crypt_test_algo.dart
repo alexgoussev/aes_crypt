@@ -16,50 +16,20 @@ void main() {
   Uint8List key = Uint8List.fromList(List<int>.generate(32, (i) => random.nextInt(256)));
   crypt.aesSetKeys(key, iv);
 
-  group('A group of tests', () {
+  group('Hashes', () {
 
-    test('Test SHA256', () {
+    test('SHA256', () {
       Uint8List hash1 = SHA256Digest().process(srcData);
       Uint8List hash2 = crypt.sha256(srcData);
       expect(hash1.isEqual(hash2), equals(true));
     });
 
-    test('Test HMAC SHA256', () {
+    test('HMAC SHA256', () {
       var hmac = HMac(SHA256Digest(), 64)..init(KeyParameter(key));
       Uint8List hash1 = hmac.process(srcData);
       Uint8List hash2 = crypt.hmacSha256(key, srcData);
       expect(hash1.isEqual(hash2), equals(true));
     });
-
-
-    test('Test AES CBC encryption/decryption', () {
-      crypt.aesSetMode(AesMode.cbc);
-      Uint8List encData = crypt.aesEncrypt(srcData);
-      Uint8List decData = crypt.aesDecrypt(encData);
-      expect(srcData.isEqual(decData), equals(true));
-    });
-
-    test('Test AES ECB encryption/decryption', () {
-      crypt.aesSetMode(AesMode.ecb);
-      Uint8List encData = crypt.aesEncrypt(srcData);
-      Uint8List decData = crypt.aesDecrypt(encData);
-      expect(srcData.isEqual(decData), equals(true));
-    });
-
-    test('Test AES CFB encryption/decryption', () {
-      crypt.aesSetMode(AesMode.cfb);
-      Uint8List encData = crypt.aesEncrypt(srcData);
-      Uint8List decData = crypt.aesDecrypt(encData);
-      expect(srcData.isEqual(decData), equals(true));
-    });
-
-    test('Test AES OFB encryption/decryption', () {
-      crypt.aesSetMode(AesMode.ofb);
-      Uint8List encData = crypt.aesEncrypt(srcData);
-      Uint8List decData = crypt.aesDecrypt(encData);
-      expect(srcData.isEqual(decData), equals(true));
-    });
-
 
   });
 }

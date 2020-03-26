@@ -8,12 +8,55 @@ import 'package:test/test.dart';
 void main() {
   var random = Random();
 
+  group('Algorithms', () {
+
+    AesCrypt crypt = AesCrypt();
+    Uint8List iv = Uint8List.fromList(List<int>.generate(16, (i) => random.nextInt(256)));
+    Uint8List key = Uint8List.fromList(List<int>.generate(32, (i) => random.nextInt(256)));
+    crypt.aesSetKeys(key, iv);
+    int srcDataLen = 100016;
+    Uint8List srcData = Uint8List.fromList(List<int>.generate(srcDataLen, (i) => random.nextInt(256)));
+
+    test('Test AES CBC encryption/decryption', () {
+      crypt.aesSetMode(AesMode.cbc);
+      Uint8List encData = crypt.aesEncrypt(srcData);
+      Uint8List decData = crypt.aesDecrypt(encData);
+      expect(srcData.isEqual(decData), equals(true));
+    });
+
+    test('Test AES ECB encryption/decryption', () {
+      crypt.aesSetMode(AesMode.ecb);
+      Uint8List encData = crypt.aesEncrypt(srcData);
+      Uint8List decData = crypt.aesDecrypt(encData);
+      expect(srcData.isEqual(decData), equals(true));
+    });
+
+    test('Test AES CFB encryption/decryption', () {
+      crypt.aesSetMode(AesMode.cfb);
+      Uint8List encData = crypt.aesEncrypt(srcData);
+      Uint8List decData = crypt.aesDecrypt(encData);
+      expect(srcData.isEqual(decData), equals(true));
+    });
+
+    test('Test AES OFB encryption/decryption', () {
+      crypt.aesSetMode(AesMode.ofb);
+      Uint8List encData = crypt.aesEncrypt(srcData);
+      Uint8List decData = crypt.aesDecrypt(encData);
+      expect(srcData.isEqual(decData), equals(true));
+    });
+
+  });
+
+
   AesCrypt crypt = AesCrypt();
   crypt.setPassword('passw 密碼 パスワード пароль كلمة السر ꜩꝕ 𐌰𐍉 𝕬𝖃');
   crypt.setOverwriteMode(AesCryptOwMode.warn);
 
+  int srcDataLen = 100003;
+  Uint8List srcData = Uint8List.fromList(List<int>.generate(srcDataLen, (i) => random.nextInt(256)));
 
-  group('A group of tests', () {
+
+  group('Encryption/decryption', () {
 
     test('Test `encryptFileSync()` and `decryptFileSync()` functions', () {
       String src_filepath = './test/testfile.txt';
@@ -53,8 +96,6 @@ void main() {
     });
 
 
-    int srcDataLen = 100016;
-    var srcData = Uint8List.fromList(List<int>.generate(srcDataLen, (i) => random.nextInt(256)));
     String enc_filepath = './test/testfile2.txt.aes';
 
     test('Test `encryptDataToFileSync()` and `decryptDataFromFileSync()` functions', () {
@@ -118,6 +159,7 @@ void main() {
       File(encFilepath).delete();
       expect(decString, equals(srcString));
     });
+
 
 //    test('', () {
 //      expect(true, equals(true));
