@@ -6,10 +6,9 @@ class AesCryptArgumentError extends ArgumentError {
   /// describing the erroneous argument.
   AesCryptArgumentError(String message) : super(message);
 
-  /// Throws AesCryptArgumentError if `argument` is: null `Object`, empty `String` or empty `Iterable`
-  static void checkNotNullOrEmpty(Object argument, String message) {
-    if (
-    argument == null ||
+  /// Throws [AesCryptArgumentError] if [argument] is: null [Object], empty [String] or empty [Iterable]
+  static void checkNullOrEmpty(Object argument, String message) {
+    if (argument == null ||
         ((argument is String)? argument.isEmpty : false) ||
         ((argument is Iterable)? argument.isEmpty : false)
     ) throw AesCryptArgumentError(message);
@@ -17,11 +16,11 @@ class AesCryptArgumentError extends ArgumentError {
 }
 
 
-/// Exception thrown when a file operation fails.
-class AesCryptIOException extends FileSystemException {
-  /// Creates a new AesCryptIOException with an error message `message`,
-  /// optional file system path `path` and optional OS error `osError`.
-  const AesCryptIOException(String message, [String path = '', OSError osError]) : super(message, path, osError);
+/// Exception thrown when the file system operation fails.
+class AesCryptFsException extends FileSystemException {
+  /// Creates a new AesCryptFsException with an error message [message],
+  /// optional file system path [path] and optional OS error [osError].
+  const AesCryptFsException(String message, [String path = '', OSError osError]) : super(message, path, osError);
 }
 
 

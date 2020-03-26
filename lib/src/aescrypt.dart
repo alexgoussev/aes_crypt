@@ -82,8 +82,8 @@ class AesCrypt {
   String encryptDataToFileSync(Uint8List srcData, String destFilePath) {
     destFilePath = destFilePath.trim();
 
-    AesCryptArgumentError.checkNotNullOrEmpty(_password, 'Empty password.');
-    AesCryptArgumentError.checkNotNullOrEmpty(destFilePath, 'Empty encrypted file path.');
+    AesCryptArgumentError.checkNullOrEmpty(_password, 'Empty password.');
+    AesCryptArgumentError.checkNullOrEmpty(destFilePath, 'Empty encrypted file path.');
 
     _log('ENCRYPTION', 'Started');
 
@@ -108,14 +108,14 @@ class AesCrypt {
     try {
       raf = outFile.openSync(mode: FileMode.writeOnly);
     } on FileSystemException catch(e) {
-      throw AesCryptIOException('Failed to open file $destFilePath for writing.', e.path, e.osError);
+      throw AesCryptFsException('Failed to open file $destFilePath for writing.', e.path, e.osError);
     }
     try {
       _Chunks.forEach((c) { raf.writeFromSync(_dp[c]); });
     } on FileSystemException catch(e) {
       raf.closeSync();
       _dp.values.forEach((v) { v.fillByZero(); });
-      throw AesCryptIOException('Failed to write encrypted data to file $destFilePath.', e.path, e.osError);
+      throw AesCryptFsException('Failed to write encrypted data to file $destFilePath.', e.path, e.osError);
     }
     raf.closeSync();
 
@@ -135,8 +135,8 @@ class AesCrypt {
   Future<String> encryptDataToFile(Uint8List srcData, String destFilePath) async {
     destFilePath = destFilePath.trim();
 
-    AesCryptArgumentError.checkNotNullOrEmpty(_password, 'Empty password.');
-    AesCryptArgumentError.checkNotNullOrEmpty(destFilePath, 'Empty encrypted file path.');
+    AesCryptArgumentError.checkNullOrEmpty(_password, 'Empty password.');
+    AesCryptArgumentError.checkNullOrEmpty(destFilePath, 'Empty encrypted file path.');
 
     _log('ENCRYPTION', 'Started');
 
@@ -161,14 +161,14 @@ class AesCrypt {
     try {
       raf = await outFile.open(mode: FileMode.writeOnly);
     } on FileSystemException catch(e) {
-      throw AesCryptIOException('Failed to open file $destFilePath for writing.', e.path, e.osError);
+      throw AesCryptFsException('Failed to open file $destFilePath for writing.', e.path, e.osError);
     }
     try {
       await Future.forEach(_Chunks, (c) => raf.writeFrom(_dp[c]));
     } on FileSystemException catch(e) {
       await raf.close();
       _dp.values.forEach((v) { v.fillByZero(); });
-      throw AesCryptIOException('Failed to write encrypted data to file $destFilePath.', e.path, e.osError);
+      throw AesCryptFsException('Failed to write encrypted data to file $destFilePath.', e.path, e.osError);
     }
     await raf.close();
 
@@ -189,15 +189,15 @@ class AesCrypt {
     srcFilePath = srcFilePath.trim();
     destFilePath = destFilePath.trim();
 
-    AesCryptArgumentError.checkNotNullOrEmpty(_password, 'Empty password.');
-    AesCryptArgumentError.checkNotNullOrEmpty(srcFilePath, 'Empty source file path.');
+    AesCryptArgumentError.checkNullOrEmpty(_password, 'Empty password.');
+    AesCryptArgumentError.checkNullOrEmpty(srcFilePath, 'Empty source file path.');
     if (srcFilePath == destFilePath) throw AesCryptArgumentError('Source file path and encrypted file path are the same.');
 
     File inFile = File(srcFilePath);
     if (!inFile.existsSync()) {
-      throw AesCryptIOException('Source file $srcFilePath does not exist.', srcFilePath);
+      throw AesCryptFsException('Source file $srcFilePath does not exist.', srcFilePath);
     } else if (!inFile.isReadable()) {
-      throw AesCryptIOException('Source file $srcFilePath is not readable.', srcFilePath);
+      throw AesCryptFsException('Source file $srcFilePath is not readable.', srcFilePath);
     }
 
     _log('ENCRYPTION', 'Started');
@@ -216,13 +216,13 @@ class AesCrypt {
     try {
       f = inFile.openSync(mode: FileMode.read);
     } on FileSystemException catch(e) {
-      throw AesCryptIOException('Failed to open file $srcFilePath for reading.', e.path, e.osError);
+      throw AesCryptFsException('Failed to open file $srcFilePath for reading.', e.path, e.osError);
     }
     try {
       f.readIntoSync(srcData);
     } on FileSystemException catch(e) {
       f.closeSync();
-      throw AesCryptIOException('Failed to read file $srcFilePath', e.path, e.osError);
+      throw AesCryptFsException('Failed to read file $srcFilePath', e.path, e.osError);
     }
     f.closeSync();
 
@@ -243,14 +243,14 @@ class AesCrypt {
     try {
       raf = outFile.openSync(mode: FileMode.writeOnly);
     } on FileSystemException catch(e) {
-      throw AesCryptIOException('Failed to open file $destFilePath for writing.', e.path, e.osError);
+      throw AesCryptFsException('Failed to open file $destFilePath for writing.', e.path, e.osError);
     }
     try {
       _Chunks.forEach((c) { raf.writeFromSync(_dp[c]); });
     } on FileSystemException catch(e) {
       raf.closeSync();
       _dp.values.forEach((v) { v.fillByZero(); });
-      throw AesCryptIOException('Failed to write encrypted data to file $destFilePath.', e.path, e.osError);
+      throw AesCryptFsException('Failed to write encrypted data to file $destFilePath.', e.path, e.osError);
     }
     raf.closeSync();
 
@@ -265,15 +265,15 @@ class AesCrypt {
     srcFilePath = srcFilePath.trim();
     destFilePath = destFilePath.trim();
 
-    AesCryptArgumentError.checkNotNullOrEmpty(_password, 'Empty password.');
-    AesCryptArgumentError.checkNotNullOrEmpty(srcFilePath, 'Empty source file path.');
+    AesCryptArgumentError.checkNullOrEmpty(_password, 'Empty password.');
+    AesCryptArgumentError.checkNullOrEmpty(srcFilePath, 'Empty source file path.');
     if (srcFilePath == destFilePath) throw AesCryptArgumentError('Source file path and encrypted file path are the same.');
 
     File inFile = File(srcFilePath);
     if (! await inFile.exists()) {
-      throw AesCryptIOException('Source file $srcFilePath does not exist.', srcFilePath);
+      throw AesCryptFsException('Source file $srcFilePath does not exist.', srcFilePath);
     } else if (!inFile.isReadable()) {
-      throw AesCryptIOException('Source file $srcFilePath is not readable.', srcFilePath);
+      throw AesCryptFsException('Source file $srcFilePath is not readable.', srcFilePath);
     }
 
     _log('ENCRYPTION', 'Started');
@@ -292,13 +292,13 @@ class AesCrypt {
     try {
       f = await inFile.open(mode: FileMode.read);
     } on FileSystemException catch(e) {
-      throw AesCryptIOException('Failed to open file $srcFilePath for reading.', e.path, e.osError);
+      throw AesCryptFsException('Failed to open file $srcFilePath for reading.', e.path, e.osError);
     }
     try {
       await f.readInto(srcData);
     } on FileSystemException catch(e) {
       await f.close();
-      throw AesCryptIOException('Failed to read file $srcFilePath', e.path, e.osError);
+      throw AesCryptFsException('Failed to read file $srcFilePath', e.path, e.osError);
     }
     await f.close();
 
@@ -317,14 +317,14 @@ class AesCrypt {
     try {
       raf = await outFile.open(mode: FileMode.writeOnly);
     } on FileSystemException catch(e) {
-      throw AesCryptIOException('Failed to open file $destFilePath for writing.', e.path, e.osError);
+      throw AesCryptFsException('Failed to open file $destFilePath for writing.', e.path, e.osError);
     }
     try {
       await Future.forEach(_Chunks, (c) => raf.writeFrom(_dp[c]));
     } on FileSystemException catch(e) {
       await raf.closeSync();
       _dp.values.forEach((v) { v.fillByZero(); });
-      throw AesCryptIOException('Failed to write encrypted data to file $destFilePath.', e.path, e.osError);
+      throw AesCryptFsException('Failed to write encrypted data to file $destFilePath.', e.path, e.osError);
     }
     await raf.closeSync();
 
@@ -338,22 +338,22 @@ class AesCrypt {
   Uint8List decryptDataFromFileSync(String srcFilePath) {
     srcFilePath = srcFilePath.trim();
 
-    AesCryptArgumentError.checkNotNullOrEmpty(_password, 'Empty password.');
-    AesCryptArgumentError.checkNotNullOrEmpty(srcFilePath, 'Empty source file path.');
+    AesCryptArgumentError.checkNullOrEmpty(_password, 'Empty password.');
+    AesCryptArgumentError.checkNullOrEmpty(srcFilePath, 'Empty source file path.');
 
     _log('DECRYPTION', 'Started');
     _log('PASSWORD', _passBytes);
 
     File inFile = File(srcFilePath);
     if (!inFile.existsSync()) {
-      throw AesCryptIOException('Source file $srcFilePath does not exist.');
+      throw AesCryptFsException('Source file $srcFilePath does not exist.');
     }
 
     RandomAccessFile f;
     try {
       f = inFile.openSync(mode: FileMode.read);
     } on FileSystemException catch(e) {
-      throw AesCryptIOException('Failed to open file $srcFilePath for reading.', e.path, e.osError);
+      throw AesCryptFsException('Failed to open file $srcFilePath for reading.', e.path, e.osError);
     }
 
     Map<_Data,Uint8List> keys = _readKeysSync(f);
@@ -401,22 +401,22 @@ class AesCrypt {
   Future<Uint8List> decryptDataFromFile(String srcFilePath) async {
     srcFilePath = srcFilePath.trim();
 
-    AesCryptArgumentError.checkNotNullOrEmpty(_password, 'Empty password.');
-    AesCryptArgumentError.checkNotNullOrEmpty(srcFilePath, 'Empty source file path.');
+    AesCryptArgumentError.checkNullOrEmpty(_password, 'Empty password.');
+    AesCryptArgumentError.checkNullOrEmpty(srcFilePath, 'Empty source file path.');
 
     _log('DECRYPTION', 'Started');
     _log('PASSWORD', _passBytes);
 
     File inFile = File(srcFilePath);
     if (! await inFile.exists()) {
-      throw AesCryptIOException('Source file $srcFilePath does not exist.');
+      throw AesCryptFsException('Source file $srcFilePath does not exist.');
     }
 
     RandomAccessFile f;
     try {
       f = await inFile.open(mode: FileMode.read);
     } on FileSystemException catch(e) {
-      throw AesCryptIOException('Failed to open file $srcFilePath for reading.', e.path, e.osError);
+      throw AesCryptFsException('Failed to open file $srcFilePath for reading.', e.path, e.osError);
     }
 
     Map<_Data,Uint8List> keys = await _readKeys(f);
@@ -466,8 +466,8 @@ class AesCrypt {
     srcFilePath = srcFilePath.trim();
     destFilePath = destFilePath.trim();
 
-    AesCryptArgumentError.checkNotNullOrEmpty(_password, 'Empty password.');
-    AesCryptArgumentError.checkNotNullOrEmpty(srcFilePath, 'Empty source file path.');
+    AesCryptArgumentError.checkNullOrEmpty(_password, 'Empty password.');
+    AesCryptArgumentError.checkNullOrEmpty(srcFilePath, 'Empty source file path.');
     if (srcFilePath == destFilePath) throw AesCryptArgumentError('Source file path and decrypted file path are the same.');
 
     _log('DECRYPTION', 'Started');
@@ -513,7 +513,7 @@ class AesCrypt {
     try {
       raf = outFile.openSync(mode: FileMode.writeOnly);
     } on FileSystemException catch(e) {
-      throw AesCryptIOException('Failed to open $srcFilePath for writing.', e.path, e.osError);
+      throw AesCryptFsException('Failed to open $srcFilePath for writing.', e.path, e.osError);
     }
     try {
       raf.writeFromSync(decrypted_data_full, 0,
@@ -521,7 +521,7 @@ class AesCrypt {
 
     } on FileSystemException catch(e) {
       raf.closeSync();
-      throw AesCryptIOException('Failed to write to file $srcFilePath.', e.path, e.osError);
+      throw AesCryptFsException('Failed to write to file $srcFilePath.', e.path, e.osError);
     }
     raf.closeSync();
 
@@ -535,8 +535,8 @@ class AesCrypt {
     srcFilePath = srcFilePath.trim();
     destFilePath = destFilePath.trim();
 
-    AesCryptArgumentError.checkNotNullOrEmpty(_password, 'Empty password.');
-    AesCryptArgumentError.checkNotNullOrEmpty(srcFilePath, 'Empty source file path.');
+    AesCryptArgumentError.checkNullOrEmpty(_password, 'Empty password.');
+    AesCryptArgumentError.checkNullOrEmpty(srcFilePath, 'Empty source file path.');
     if (srcFilePath == destFilePath) throw AesCryptArgumentError('Source file path and decrypted file path are the same.');
 
     _log('DECRYPTION', 'Started');
@@ -582,14 +582,14 @@ class AesCrypt {
     try {
       raf = await outFile.open(mode: FileMode.writeOnly);
     } on FileSystemException catch(e) {
-      throw AesCryptIOException('Failed to open $srcFilePath for writing.', e.path, e.osError);
+      throw AesCryptFsException('Failed to open $srcFilePath for writing.', e.path, e.osError);
     }
     try {
       await raf.writeFrom(decrypted_data_full, 0,
           decrypted_data_full.length - (file_size_modulo == 0? 0: 16 - file_size_modulo));
     } on FileSystemException catch(e) {
       await raf.closeSync();
-      throw AesCryptIOException('Failed to write to file $srcFilePath.', e.path, e.osError);
+      throw AesCryptFsException('Failed to write to file $srcFilePath.', e.path, e.osError);
     }
     await raf.closeSync();
 
@@ -810,74 +810,74 @@ class AesCrypt {
     int i;
 
     for (i = 16; i < 64; i++) {
-      s0 = _rotr(_chunkBuff[i - 15], 7) ^ _rotr(_chunkBuff[i - 15], 18) ^ (_chunkBuff[i - 15] >> 3);
-      s1 = _rotr(_chunkBuff[i - 2], 17) ^ _rotr(_chunkBuff[i - 2], 19) ^ (_chunkBuff[i - 2] >> 10);
+      _s0 = _rotr(_chunkBuff[i - 15], 7) ^ _rotr(_chunkBuff[i - 15], 18) ^ (_chunkBuff[i - 15] >> 3);
+      _s1 = _rotr(_chunkBuff[i - 2], 17) ^ _rotr(_chunkBuff[i - 2], 19) ^ (_chunkBuff[i - 2] >> 10);
       // _chunkBuff is Uint32List and because of that it does'n need in '& _mask32' at the end
       _chunkBuff[i] = _chunkBuff[i - 16] + s0 + _chunkBuff[i - 7] + s1;
     }
 
-    a = _h0; b = _h1; c = _h2; d = _h3; e = _h4; f = _h5; g = _h6; h = _h7;
+    _a = _h0; _b = _h1; _c = _h2; _d = _h3; _e = _h4; _f = _h5; _g = _h6; _h = _h7;
 
     // This implementation was taken from 'pointycastle' library
     // https://pub.dev/packages/pointycastle
     int t = 0;
     for (i = 0; i < 8; ++i) {
       // t = 8 * i
-      h = (h + _Sum1(e) + _Ch(e, f, g) + _K[t] + _chunkBuff[t++]) & _mask32;
-      d = (d + h) & _mask32;
-      h = (h + _Sum0(a) + _Maj(a, b, c)) & _mask32;
+      _h = (_h + _Sum1(_e) + _Ch(_e, _f, _g) + _K[t] + _chunkBuff[t++]) & _mask32;
+      _d = (_d + _h) & _mask32;
+      _h = (_h + _Sum0(_a) + _Maj(_a, _b, _c)) & _mask32;
 
       // t = 8 * i + 1
-      g = (g + _Sum1(d) + _Ch(d, e, f) + _K[t] + _chunkBuff[t++]) & _mask32;
-      c = (c + g) & _mask32;
-      g = (g + _Sum0(h) + _Maj(h, a, b)) & _mask32;
+      _g = (_g + _Sum1(_d) + _Ch(_d, _e, _f) + _K[t] + _chunkBuff[t++]) & _mask32;
+      _c = (_c + _g) & _mask32;
+      _g = (_g + _Sum0(_h) + _Maj(_h, _a, _b)) & _mask32;
 
       // t = 8 * i + 2
-      f = (f + _Sum1(c) + _Ch(c, d, e) + _K[t] + _chunkBuff[t++]) & _mask32;
-      b = (b + f) & _mask32;
-      f = (f + _Sum0(g) + _Maj(g, h, a)) & _mask32;
+      _f = (_f + _Sum1(_c) + _Ch(_c, _d, _e) + _K[t] + _chunkBuff[t++]) & _mask32;
+      _b = (_b + _f) & _mask32;
+      _f = (_f + _Sum0(_g) + _Maj(_g, _h, _a)) & _mask32;
 
       // t = 8 * i + 3
-      e = (e + _Sum1(b) + _Ch(b, c, d) + _K[t] + _chunkBuff[t++]) & _mask32;
-      a = (a + e) & _mask32;
-      e = (e + _Sum0(f) + _Maj(f, g, h)) & _mask32;
+      _e = (_e + _Sum1(_b) + _Ch(_b, _c, _d) + _K[t] + _chunkBuff[t++]) & _mask32;
+      _a = (_a + _e) & _mask32;
+      _e = (_e + _Sum0(_f) + _Maj(_f, _g, _h)) & _mask32;
 
       // t = 8 * i + 4
-      d = (d + _Sum1(a) + _Ch(a, b, c) + _K[t] + _chunkBuff[t++]) & _mask32;
-      h = (h + d) & _mask32;
-      d = (d + _Sum0(e) + _Maj(e, f, g)) & _mask32;
+      _d = (_d + _Sum1(_a) + _Ch(_a, _b, _c) + _K[t] + _chunkBuff[t++]) & _mask32;
+      _h = (_h + _d) & _mask32;
+      _d = (_d + _Sum0(_e) + _Maj(_e, _f, _g)) & _mask32;
 
       // t = 8 * i + 5
-      c = (c + _Sum1(h) + _Ch(h, a, b) + _K[t] + _chunkBuff[t++]) & _mask32;
-      g = (g + c) & _mask32;
-      c = (c + _Sum0(d) + _Maj(d, e, f)) & _mask32;
+      _c = (_c + _Sum1(_h) + _Ch(_h, _a, _b) + _K[t] + _chunkBuff[t++]) & _mask32;
+      _g = (_g + _c) & _mask32;
+      _c = (_c + _Sum0(_d) + _Maj(_d, _e, _f)) & _mask32;
 
       // t = 8 * i + 6
-      b = (b + _Sum1(g) + _Ch(g, h, a) + _K[t] + _chunkBuff[t++]) & _mask32;
-      f = (f + b) & _mask32;
-      b = (b + _Sum0(c) + _Maj(c, d, e)) & _mask32;
+      _b = (_b + _Sum1(_g) + _Ch(_g, _h, _a) + _K[t] + _chunkBuff[t++]) & _mask32;
+      _f = (_f + _b) & _mask32;
+      _b = (_b + _Sum0(_c) + _Maj(_c, _d, _e)) & _mask32;
 
       // t = 8 * i + 7
-      a = (a + _Sum1(f) + _Ch(f, g, h) + _K[t] + _chunkBuff[t++]) & _mask32;
-      e = (e + a) & _mask32;
-      a = (a + _Sum0(b) + _Maj(b, c, d)) & _mask32;
+      _a = (_a + _Sum1(_f) + _Ch(_f, _g, _h) + _K[t] + _chunkBuff[t++]) & _mask32;
+      _e = (_e + _a) & _mask32;
+      _a = (_a + _Sum0(_b) + _Maj(_b, _c, _d)) & _mask32;
     }
 
 /* This implementation is slower by about 5%
     int t1, t2, maj, ch;
     for (i = 0; i < 64; ++i) {
-      s0 = _rotr(a, 2) ^ _rotr(a, 13) ^ _rotr(a, 22);
-      maj = (a & b) ^ (a & c) ^ (b & c);
-      t2 = s0 + maj;
-      s1 = _rotr(e, 6) ^ _rotr(e, 11) ^ _rotr(e, 25);
-      ch = (e & f) ^ ((~e & _mask32) & g);
-      t1 = h + s1 + ch + _K[i] + _chunkBuff[i];
-      h = g; g = f; f = e; e = (d + t1) & _mask32;
-      d = c; c = b; b = a; a = (t1 + t2) & _mask32;
+      _s0 = _rotr(_a, 2) ^ _rotr(_a, 13) ^ _rotr(_a, 22);
+      maj = (_a & _b) ^ (_a & _c) ^ (_b & _c);
+      t2 = _s0 + maj;
+      _s1 = _rotr(_e, 6) ^ _rotr(_e, 11) ^ _rotr(_e, 25);
+      ch = (_e & _f) ^ ((~_e & _mask32) & _g);
+      t1 = h + _s1 + ch + _K[i] + _chunkBuff[i];
+      _h = _g; _g = _f; _f = _e; _e = (_d + t1) & _mask32;
+      _d = _c; _c = _b; _b = _a; _a = (t1 + t2) & _mask32;
     }
 */
-    _h0 = (_h0 + a) & _mask32; _h1 = (_h1 + b) & _mask32; _h2 = (_h2 + c) & _mask32; _h3 = (_h3 + d) & _mask32;
-    _h4 = (_h4 + e) & _mask32; _h5 = (_h5 + f) & _mask32; _h6 = (_h6 + g) & _mask32; _h7 = (_h7 + h) & _mask32;
+    _h0 = (_h0 + _a) & _mask32; _h1 = (_h1 + _b) & _mask32; _h2 = (_h2 + _c) & _mask32; _h3 = (_h3 + _d) & _mask32;
+    _h4 = (_h4 + _e) & _mask32; _h5 = (_h5 + _f) & _mask32; _h6 = (_h6 + _g) & _mask32; _h7 = (_h7 + _h) & _mask32;
   }
 
 
@@ -1114,7 +1114,7 @@ class AesCrypt {
 
   /// Encrypts data
   Uint8List aesEncrypt(Uint8List data) {
-    AesCryptArgumentError.checkNotNullOrEmpty(_aesKey, 'AES encryption key is empty.');
+    AesCryptArgumentError.checkNullOrEmpty(_aesKey, 'AES encryption key is empty.');
     if (_aesMode != AesMode.ecb && _aesIV.isEmpty) {
       throw AesCryptArgumentError('The initialization vector is empty. It can not be empty when AES mode is not ECB.');
     } else if (data.length % 16 != 0) {
@@ -1177,7 +1177,7 @@ class AesCrypt {
 
   /// Decrypts data
   Uint8List aesDecrypt(Uint8List data) {
-    AesCryptArgumentError.checkNotNullOrEmpty(_aesKey, 'AES encryption key is empty.');
+    AesCryptArgumentError.checkNullOrEmpty(_aesKey, 'AES encryption key is empty.');
     if (_aesMode != AesMode.ecb && _aesIV.isEmpty) {
       throw AesCryptArgumentError('The initialization vector is empty. It can not be empty when AES mode is not ECB.');
     } else if (data.length % 16 != 0) {
@@ -1829,7 +1829,7 @@ class AesCrypt {
     try {
       data = f.readSync(num_bytes);
     } on FileSystemException catch(e) {
-      throw AesCryptIOException('Failed to read chunk \'$chunk_name\' of $num_bytes bytes.', e.path, e.osError);
+      throw AesCryptFsException('Failed to read chunk \'$chunk_name\' of $num_bytes bytes.', e.path, e.osError);
     }
     if (data.length != num_bytes) {
       throw AesCryptDataException('Failed to read chunk \'$chunk_name\' of $num_bytes bytes, only found ${data.length} bytes.');
@@ -1843,7 +1843,7 @@ class AesCrypt {
     try {
       data = await f.read(num_bytes);
     } on FileSystemException catch(e) {
-      throw AesCryptIOException('Failed to read chunk \'$chunk_name\' of $num_bytes bytes.', e.path, e.osError);
+      throw AesCryptFsException('Failed to read chunk \'$chunk_name\' of $num_bytes bytes.', e.path, e.osError);
     }
     if (data.length != num_bytes) {
       throw AesCryptDataException('Failed to read chunk \'$chunk_name\' of $num_bytes bytes, only found ${data.length} bytes.');

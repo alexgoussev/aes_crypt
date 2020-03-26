@@ -36,7 +36,7 @@ void main() {
     // It goes here in the case of wrong password or corrupted file.
     print('The decryption has been completed unsuccessfully.');
     print('Error: $e');
-  } on AesCryptIOException catch (e) {
+  } on AesCryptFsException catch (e) {
     // It goes here in the case of some file system operation error
     // (file opening, reading or writing).
     print('The decryption has been completed unsuccessfully.');

@@ -1,6 +1,6 @@
 part of aes_crypt;
 
-extension Uint8ListExtension on Uint8List {
+extension _Uint8ListExtension on Uint8List {
   bool get isNullOrEmpty => this == null || this.isEmpty;
 
   Uint8List addList(Uint8List other) {
@@ -66,7 +66,7 @@ extension Uint8ListExtension on Uint8List {
 }
 
 
-extension StringExtension on String {
+extension _StringExtension on String {
   // Returns true if string is: null or empty
   bool get isNullOrEmpty => this == null || this.isEmpty;
 
