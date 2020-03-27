@@ -34,13 +34,14 @@ extension _Uint8ListExtension on Uint8List {
       i += 2;
     }
     while (i < this.length) {
-      int firstWord = (endian == Endian.big)? (this[i] << 8) + this[i + 1] : (this[i+1] << 8) + this[i];
+      int firstWord = (endian == Endian.big)?
+        (this[i] << 8) + this[i + 1] : (this[i + 1] << 8) + this[i];
       if (0xD800 <= firstWord && firstWord <= 0xDBFF) {
-        int secondWord = (endian == Endian.big)? (this[i + 2] << 8) + this[i + 3] : (this[i + 3] << 8) + this[i + 2];
+        int secondWord = (endian == Endian.big)?
+          (this[i + 2] << 8) + this[i + 3] : (this[i + 3] << 8) + this[i + 2];
         buffer.writeCharCode(((firstWord - 0xD800) << 10) + (secondWord - 0xDC00) + 0x10000);
         i += 4;
-      }
-      else {
+      } else {
         buffer.writeCharCode(firstWord);
         i += 2;
       }
@@ -59,12 +60,14 @@ extension _Uint8ListExtension on Uint8List {
 
   String toHexString() {
     StringBuffer str = StringBuffer();
-    this.forEach((item) { str.write(item.toRadixString(16).toUpperCase().padLeft(2, '0')); });
+    this.forEach((item) {
+      str.write(item.toRadixString(16).toUpperCase().padLeft(2, '0'));
+    });
     return str.toString();
   }
+
   void fillByZero() => this.fillRange(0, this.length, 0);
 }
-
 
 extension _StringExtension on String {
   // Returns true if string is: null or empty
@@ -72,7 +75,8 @@ extension _StringExtension on String {
 
   // Converts UTF-16 string to bytes
   Uint8List toUtf16Bytes([Endian endian = Endian.big, bool bom = false]) {
-    List<int> list = bom? (endian == Endian.big? [0xFE, 0xFF]:[0xFF, 0xFE]) : [];
+    List<int> list =
+        bom ? (endian == Endian.big ? [0xFE, 0xFF] : [0xFF, 0xFE]) : [];
     this.runes.forEach((rune) {
       if (rune >= 0x10000) {
         int firstWord = (rune >> 10) + 0xD800 - (0x10000 >> 10);
@@ -88,8 +92,7 @@ extension _StringExtension on String {
           list.add(secondWord & 0xFF);
           list.add(secondWord >> 8);
         }
-      }
-      else {
+      } else {
         if (endian == Endian.big) {
           list.add(rune >> 8);
           list.add(rune & 0xFF);
@@ -115,16 +118,22 @@ extension _StringExtension on String {
   }
 }
 
-
 extension _FileExtension on File {
   bool isReadable() {
     RandomAccessFile f;
 
-    try { f = this.openSync(mode: FileMode.read); }
-    on FileSystemException { return false; }
+    try {
+      f = this.openSync(mode: FileMode.read);
+    } on FileSystemException {
+      return false;
+    }
 
-    try { f.lockSync(FileLock.shared); }
-    on FileSystemException { f.closeSync(); return false; }
+    try {
+      f.lockSync(FileLock.shared);
+    } on FileSystemException {
+      f.closeSync();
+      return false;
+    }
 
     f.unlockSync();
     f.closeSync();

@@ -11,7 +11,7 @@ linter:
     omit_local_variable_types: false
     unnecessary_new: false
     unnecessary_this: false
-    curly_braces_in_flow_control_structures: false
+    curly_braces_in_flow_control_structures: true
 
 analyzer:
 #   exclude:

@@ -791,7 +791,7 @@ class AesCrypt {
     Uint8List block16 = Uint8List.fromList(_aesIV);
 
     // process first chunk for SHA256 (HMAC ipad, 64 bytes)
-    for (int i = 0; i < 16; ++i) _chunkBuff[i] = i_pad.buffer.asByteData().getUint32(i * 4);
+    for (int i = 0; i < 16; ++i) { _chunkBuff[i] = i_pad.buffer.asByteData().getUint32(i * 4); }
     _processChunk();
 
     int n;
@@ -805,7 +805,7 @@ class AesCrypt {
         encData.setRange(i, i + 16, block16);
       }
       chunk = encData.buffer.asByteData(n, 64);
-      for (int i = 0; i < 16; ++i) _chunkBuff[i] = chunk.getUint32(i * 4);
+      for (int i = 0; i < 16; ++i) { _chunkBuff[i] = chunk.getUint32(i * 4); }
       _processChunk();
     }
 
@@ -825,7 +825,7 @@ class AesCrypt {
     chunk = lastChunk.buffer.asByteData();
     chunk.setUint8(i - n, 0x80);
     chunk.setInt64(56, lengthToWrite);
-    for (int i = 0; i < 16; ++i) _chunkBuff[i] = chunk.getUint32(i * 4);
+    for (int i = 0; i < 16; ++i) { _chunkBuff[i] = chunk.getUint32(i * 4); }
     _processChunk();
 
 
@@ -939,26 +939,26 @@ class AesCrypt {
     }
 
     if (hmacIpad != null) {
-      for (int i = 0; i < 16; ++i) _chunkBuff[i] = hmacIpad.buffer.asByteData().getUint32(i * 4);
+      for (int i = 0; i < 16; ++i) { _chunkBuff[i] = hmacIpad.buffer.asByteData().getUint32(i * 4); }
       _processChunk();
     }
 
     for (int n = 0; n < chanksToProcess; n += 64) {
       chunk = data.buffer.asByteData(n, 64);
-      for (int i = 0; i < 16; ++i) _chunkBuff[i] = chunk.getUint32(i * 4);
+      for (int i = 0; i < 16; ++i) { _chunkBuff[i] = chunk.getUint32(i * 4); }
       _processChunk();
     }
 
     if (length < lengthPadded - 64) {
-      for (int i = 0; i < 16; ++i) _chunkBuff[i] = chunkLastPre.buffer.asByteData().getUint32(i * 4);
+      for (int i = 0; i < 16; ++i) { _chunkBuff[i] = chunkLastPre.buffer.asByteData().getUint32(i * 4); }
       _processChunk();
     }
 
-    for (int i = 0; i < 16; ++i) _chunkBuff[i] = chunkLast.buffer.asByteData().getUint32(i * 4);
+    for (int i = 0; i < 16; ++i) { _chunkBuff[i] = chunkLast.buffer.asByteData().getUint32(i * 4); }
     _processChunk();
 
     Uint32List hash = Uint32List.fromList([_h0, _h1, _h2, _h3, _h4, _h5, _h6, _h7]);
-    for (int i = 0; i < 8; ++i) hash[i] = _byteSwap32(hash[i]);
+    for (int i = 0; i < 8; ++i) { hash[i] = _byteSwap32(hash[i]); }
     return hash.buffer.asUint8List();
   }
 
@@ -1295,8 +1295,8 @@ class AesCrypt {
       // put a 16-byte block into t, encrypt it and add it to the result
         for (int i = 0; i < data.length; i += 16) {
           for (int j = 0; j < 16; ++j) {
-            if ((i+j) < data.length) t[j] = data[i+j];
-            else t[j] = 0;
+            if ((i+j) < data.length) { t[j] = data[i+j]; }
+            else { t[j] = 0; }
           }
           block16 = _aesEncryptBlock(t);
           encData.setRange(i, i+16, block16);
@@ -1360,8 +1360,8 @@ class AesCrypt {
       case AesMode.ecb:
         for (int i = 0; i < data.length; i += 16) {
           for (int j = 0; j < 16; ++j) {
-            if ((i+j) < data.length) t[j] = data[i+j];
-            else t[j] = 0;
+            if ((i+j) < data.length) { t[j] = data[i+j]; }
+            else { t[j] = 0; }
           }
           x_block = _aesDecryptBlock(t);
           decData.setRange(i, i+16, x_block);
@@ -1370,8 +1370,8 @@ class AesCrypt {
       case AesMode.cbc:
         for (int i = 0; i < data.length; i += 16) {
           for (int j = 0; j < 16; ++j) {
-            if ((i+j) < data.length) t[j] = data[i+j];
-            else t[j] = 0;
+            if ((i+j) < data.length) { t[j] = data[i+j]; }
+            else { t[j] = 0; }
           }
           x_block = _aesDecryptBlock(t);
           // XOR the iv/previous cipher block with this decrypted cipher block

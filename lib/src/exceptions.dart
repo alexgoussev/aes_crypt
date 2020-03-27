@@ -8,7 +8,6 @@ enum AesCryptExceptionType {
   destFileExists,
 }
 
-
 /// Exception thrown when some error is happened. A type of the error is indicated
 /// by [type] class member.
 ///
@@ -31,7 +30,6 @@ class AesCryptException implements Exception {
   String toString() => message;
 }
 
-
 /// Error thrown when a function is passed an unacceptable argument.
 class AesCryptArgumentError extends ArgumentError {
   /// Creates a new AesCryptArgumentError with an error message [message]
@@ -41,20 +39,20 @@ class AesCryptArgumentError extends ArgumentError {
   /// Throws [AesCryptArgumentError] if [argument] is: null [Object], empty [String] or empty [Iterable]
   static void checkNullOrEmpty(Object argument, String message) {
     if (argument == null ||
-        ((argument is String)? argument.isEmpty : false) ||
-        ((argument is Iterable)? argument.isEmpty : false)
-    ) throw AesCryptArgumentError(message);
+        ((argument is String) ? argument.isEmpty : false) ||
+        ((argument is Iterable) ? argument.isEmpty : false)) {
+      throw AesCryptArgumentError(message);
+    }
   }
 }
-
 
 /// Exception thrown when the file system operation fails.
 class AesCryptFsException extends FileSystemException {
   /// Creates a new AesCryptFsException with an error message [message],
   /// optional file system path [path] and optional OS error [osError].
-  const AesCryptFsException(String message, [String path = '', OSError osError]) : super(message, path, osError);
+  const AesCryptFsException(String message, [String path = '', OSError osError])
+      : super(message, path, osError);
 }
-
 
 /// Exception thrown when an integrity of encrypted data is compromised.
 class AesCryptDataException implements Exception {
