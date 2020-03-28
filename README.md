@@ -33,7 +33,7 @@ In the `pubspec.yaml` of your project, add the following dependency:
 ```yaml
 dependencies:
   ...
-  aes_crypt: ^0.1.0
+  aes_crypt: ^0.1.1
 ```
 
 In your Dart code add the following import:

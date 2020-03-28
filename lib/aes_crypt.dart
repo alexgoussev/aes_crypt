@@ -14,5 +14,7 @@ import 'dart:convert';
 import 'dart:async';
 
 part 'src/aescrypt.dart';
+part 'src/cryptor.dart';
+part 'src/aes.dart';
 part 'src/exceptions.dart';
 part 'src/extentions.dart';
