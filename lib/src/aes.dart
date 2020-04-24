@@ -196,7 +196,7 @@ class _Aes {
       throw AesCryptArgumentError('Invalid key length for AES. Provided ${key.length * 8} bits, expected 128, 192 or 256 bits.');
     } else if (_aesMode != AesMode.ecb && iv.isNullOrEmpty) {
       throw AesCryptArgumentError('The initialization vector is not specified. It can not be empty when AES mode is not ECB.');
-    } else if (iv.length != 16) {
+    } else if (_aesMode != AesMode.ecb && iv.length != 16) {
       throw AesCryptArgumentError('Invalid IV length for AES. The initialization vector must be 128 bits long.');
     }
 
