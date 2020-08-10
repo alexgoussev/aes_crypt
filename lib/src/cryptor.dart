@@ -758,8 +758,8 @@ class _Cryptor {
 //****************************************************************************
 
   void _encryptDataAndCalculateHmac(Uint8List srcData, Uint8List key, Uint8List iv, AesMode mode) {
-    assert(!iv.isNullOrEmpty, 'AES encryption key is null or empty.');
-    assert(!key.isNullOrEmpty, 'AES initialization vector is null or empty.');
+    assert(!key.isNullOrEmpty, 'AES encryption key is null or empty.');
+    assert(!iv.isNullOrEmpty, 'AES initialization vector is null or empty.');
     _aes.aesSetParams(key, iv, mode);
 
     final Int32x4List i_pad = Int32x4List(4);
