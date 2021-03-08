@@ -1,11 +1,11 @@
 name: aes_crypt
 description: Dart encryption library for encrypting/decrypting files, plain text and binary data in AES Crypt file format.
-version: 0.1.1
+version: 0.5+2
 homepage: https://github.com/alexgoussev/aes_crypt
 repository: https://github.com/alexgoussev/aes_crypt
 
 environment:
-  sdk: '>=2.7.0 <3.0.0'
+  sdk: '>=2.12.0 <3.0.0'
 
 # dependencies:
 
