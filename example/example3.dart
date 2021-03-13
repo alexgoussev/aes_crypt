@@ -13,7 +13,8 @@ void main() async {
 
   // Source binary data to be encrypted
   int srcDataLen = 120;
-  Uint8List srcData = Uint8List.fromList(List<int>.generate(srcDataLen, (i) => random.nextInt(256)));
+  Uint8List srcData = Uint8List.fromList(
+      List<int>.generate(srcDataLen, (i) => random.nextInt(256)));
 
   // Creates an instance of AesCrypt class.
   var crypt = AesCrypt('my cool password');
@@ -21,7 +22,7 @@ void main() async {
   // Sets overwrite mode (just as an example).
   crypt.setOverwriteMode(AesCryptOwMode.on);
 
-  print('Source data: ${srcData}\n');
+  print('Source data: $srcData\n');
 
   // Encrypts source data and saves encrypted file.
   await crypt.encryptDataToFile(srcData, encFilepath);
@@ -29,5 +30,5 @@ void main() async {
   // Decrypts source data back.
   Uint8List decData = await crypt.decryptDataFromFile(encFilepath);
 
-  print('Decrypted data: ${decData}');
+  print('Decrypted data: $decData');
 }
