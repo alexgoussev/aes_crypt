@@ -108,8 +108,8 @@ extension _StringExtension on String {
   // Converts string to UTF-8 bytes
   List<int> toUtf8Bytes([bool bom = false]) {
     if (bom) {
-      Uint8List data = utf8.encode(this);
-      Uint8List dataWithBom = Uint8List(data.length + 3)
+      final Uint8List data = Uint8List.fromList(utf8.encode(this));
+      final Uint8List dataWithBom = Uint8List(data.length + 3)
         ..setAll(0, [0xEF, 0xBB, 0xBF])
         ..setRange(3, data.length + 3, data);
       return dataWithBom;
