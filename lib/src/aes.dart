@@ -159,21 +159,21 @@ class _Aes {
   // The number of 32-bit words comprising the plaintext and columns comprising the state matrix of an AES cipher.
   static const int _Nb = 4;
   // The number of 32-bit words comprising the cipher key in this AES cipher.
-  int _Nk;
+  late int _Nk;
   // The number of rounds in this AES cipher.
-  int _Nr;
+  int? _Nr;
   // The key schedule in this AES cipher.
-  Uint32List _w; // _Nb*(_Nr+1) 32-bit words
+  late Uint32List _w; // _Nb*(_Nr+1) 32-bit words
   // The state matrix in this AES cipher with _Nb columns and 4 rows
   // [[0,0,0,...], [0,0,0,...], [0,0,0,...], [0,0,0,...]];
   final List<Uint8List> _s = List.generate(4, (i) => Uint8List(4), growable:false);
 
   // The block cipher mode of operation
-  AesMode _aesMode;
+  late AesMode _aesMode;
   // The encryption key
-  Uint8List _aesKey;
+  late Uint8List _aesKey;
   // The initialization vector used in advanced cipher modes
-  Uint8List _aesIV;
+  late Uint8List _aesIV;
 
 
   _Aes() {
@@ -191,21 +191,21 @@ class _Aes {
 
 
   // Sets AES encryption key [key] and the initialization vector [iv].
-  void aesSetKeys(Uint8List key, [Uint8List iv]) {
+  void aesSetKeys(Uint8List key, [Uint8List? iv]) {
     if (![16, 24, 32].contains(key.length)) {
       throw AesCryptArgumentError('Invalid key length for AES. Provided ${key.length * 8} bits, expected 128, 192 or 256 bits.');
-    } else if (_aesMode != AesMode.ecb && iv.isNullOrEmpty) {
+    } else if (_aesMode != AesMode.ecb && (iv == null || iv.isEmpty)) {
       throw AesCryptArgumentError('The initialization vector is not specified. It can not be empty when AES mode is not ECB.');
-    } else if (iv.length != 16) {
+    } else if (iv!.length != 16) {
       throw AesCryptArgumentError('Invalid IV length for AES. The initialization vector must be 128 bits long.');
     }
 
     _aesKey = Uint8List.fromList(key);
-    _aesIV = iv.isNullOrEmpty? Uint8List(0) : Uint8List.fromList(iv);
+    _aesIV = (iv == null || iv.isEmpty)? Uint8List(0) : Uint8List.fromList(iv);
 
     _Nk = key.length ~/ 4;
     _Nr = _Nk + _Nb + 2;
-    _w = Uint32List(_Nb*(_Nr+1));
+    _w = Uint32List(_Nb*(_Nr!+1));
 
     _aesKeyExpansion(_aesKey); // places expanded key in w
   }
@@ -244,7 +244,7 @@ class _Aes {
       throw AesCryptArgumentError('Invalid data length for AES: ${data.length} bytes.');
     }
 
-    Uint8List encData = Uint8List(data.length); // returned cipher text;
+    final Uint8List encData = Uint8List(data.length); // returned cipher text;
     Uint8List t = Uint8List(16); // 16-byte block to hold the temporary input of the cipher
     Uint8List block16 = Uint8List.fromList(_aesIV); // 16-byte block to hold the temporary output of the cipher
 
@@ -310,7 +310,7 @@ class _Aes {
     }
 
     Uint8List decData = Uint8List(data.length); // returned decrypted data;
-    Uint8List t = Uint8List(16); // 16-byte block
+    final Uint8List t = Uint8List(16); // 16-byte block
     Uint8List x_block;
     Uint8List block16 = Uint8List.fromList(_aesIV); // 16-byte block to hold the temporary output of the cipher
 
@@ -364,7 +364,7 @@ class _Aes {
   Uint8List aesEncryptBlock(Uint8List data) {
     assert(_Nr != null);
 
-    Uint8List encBlock = Uint8List(16); // 16-byte string
+    final Uint8List encBlock = Uint8List(16); // 16-byte string
     int i;
 
     // place input data into the initial state matrix in column order
@@ -375,7 +375,7 @@ class _Aes {
     // add round key
     _addRoundKey(0);
 
-    for (i = 1; i < _Nr; ++i) {
+    for (i = 1; i < _Nr!; ++i) {
       // substitute bytes
       _subBytes();
       // shift rows
@@ -405,7 +405,7 @@ class _Aes {
   Uint8List aesDecryptBlock(Uint8List data) {
     assert(_Nr != null);
 
-    Uint8List decBlock = Uint8List(16); // 16-byte string
+    final Uint8List decBlock = Uint8List(16); // 16-byte string
     int i;
 
     // place input data into the initial state matrix in column order
@@ -414,9 +414,9 @@ class _Aes {
     }
 
     // add round key
-    _addRoundKey(_Nr);
+    _addRoundKey(_Nr!);
 
-    for (i = _Nr-1; i > 0; --i) {
+    for (i = _Nr!-1; i > 0; --i) {
       // inverse shift rows
       _invShiftRows();
       // inverse sub bytes
@@ -459,7 +459,7 @@ class _Aes {
       _w[i] = key.buffer.asByteData().getUint32(i*4);
     }
 
-    while (i < _Nb*(_Nr+1)) {
+    while (i < _Nb*(_Nr!+1)) {
       temp = _w[i-1];
       if (i % _Nk == 0) {
         temp = _subWord(_rotWord(temp)) ^ Rcon[i ~/ _Nk];
@@ -504,7 +504,8 @@ class _Aes {
 
   // Applies an inverse cyclic shift to the last 3 rows of a state matrix.
   void _invShiftRows() {
-    var temp = List<int>(_Nb);
+    // var temp = List<int>(_Nb);
+    final temp = List.filled(_Nb, 0);
     for (int i = 1; i < 4; ++i) {
       for (int j = 0; j < _Nb; ++j) {
         temp[(i+j) % _Nb] = _s[i][j];
@@ -544,7 +545,8 @@ class _Aes {
 
   // Applies a cyclic shift to the last 3 rows of a state matrix.
   void _shiftRows() {
-    var temp = List<int>(_Nb);
+    // var temp = List<int>(_Nb);
+    final temp = List.filled(_Nb, 0);
     for (int i = 1; i < 4; ++i) {
       for (int j = 0; j < _Nb; ++j) {
         temp[j] = _s[i][(j+i) % _Nb];
@@ -571,7 +573,7 @@ class _Aes {
     sum %= 255;
     // Get the antilog
     sum = _atable[sum];
-    return (a == 0? 0 : (b == 0? 0:sum));
+    return a == 0? 0 : (b == 0? 0:sum);
   }
 
   // Applies a cyclic permutation to a 4-byte word.
@@ -581,12 +583,13 @@ class _Aes {
   // Applies S-box substitution to each byte of a 4-byte word.
   // @returns 32-bit int
   int _subWord(int w) {
+    int _w = w;
     int temp = 0;
     // loop through 4 bytes of a word
     for (int i = 0; i < 4; ++i) {
       temp = (w >> 24) & 0xFF; // put the first 8-bits into temp
-      w = ((w << 8) & 0xFFFFFFFF) | _sBox[temp]; // add the substituted byte back
+      _w = ((w << 8) & 0xFFFFFFFF) | _sBox[temp]; // add the substituted byte back
     }
-    return w;
+    return _w;
   }
 }

@@ -38,9 +38,12 @@ class AesCryptArgumentError extends ArgumentError {
 
   /// Throws [AesCryptArgumentError] if [argument] is: null [Object], empty [String] or empty [Iterable]
   static void checkNullOrEmpty(Object argument, String message) {
-    if (argument == null ||
-        ((argument is String) ? argument.isEmpty : false) ||
-        ((argument is Iterable) ? argument.isEmpty : false)) {
+    // if (argument == null ||
+    //     ((argument is String) ? argument.isEmpty : false) ||
+    //     ((argument is Iterable) ? argument.isEmpty : false)) {
+    //   throw AesCryptArgumentError(message);
+    // }
+    if(argument == null || (argument is String && argument.isEmpty) || (argument is Iterable && argument.isEmpty)) {
       throw AesCryptArgumentError(message);
     }
   }
@@ -50,7 +53,7 @@ class AesCryptArgumentError extends ArgumentError {
 class AesCryptFsException extends FileSystemException {
   /// Creates a new AesCryptFsException with an error message [message],
   /// optional file system path [path] and optional OS error [osError].
-  const AesCryptFsException(String message, [String path = '', OSError osError])
+  const AesCryptFsException(String message, [String path = '', OSError? osError])
       : super(message, path, osError);
 }
 
