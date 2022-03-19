@@ -428,9 +428,9 @@ class _Cryptor {
       );
     }
     try {
-      await Future.forEach(_Chunks, (c) {
+      await Future.forEach(_Chunks, (c) async {
         if (_dp[c] != null) {
-          raf.writeFrom(_dp[c]!.toList());
+         await raf.writeFrom(_dp[c]!.toList());
         }
       });
     } on FileSystemException catch (e) {
